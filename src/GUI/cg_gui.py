@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-
 import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import math
 import json
-import os
-import copy
-import cg_algorithms as alg
+from GraphicsItems import *
+from algorithms import cg_algorithms as alg
+from GraphicsItems.ItemFactoryModule import ItemFactory
 from typing import Optional
 from PyQt5.QtWidgets import (
     QApplication,
@@ -657,315 +658,6 @@ class MyCanvas(QGraphicsView):
         return
 
 
-class ItemFactory:
-    '''
-    使用简单工厂模式简化生成新item的操作
-    '''
-
-    def __init__(self):
-        pass
-
-    def get_item(self, item_id: str, item_type: str, p_list: list, algorithm: str = ''):
-        if item_type == 'line':
-            return LineItem(item_id, item_type, p_list, algorithm)
-        elif item_type == 'polygon':
-            return PolygonItem(item_id, item_type, p_list, algorithm)
-        elif item_type == 'ellipse':
-            return EllipseItem(item_id, item_type, p_list, algorithm)
-        elif item_type == 'curve':
-            return CurveItem(item_id, item_type, p_list, algorithm)
-
-
-class MyItem(QGraphicsItem):
-    """
-    自定义图元类，继承自QGraphicsItem
-    """
-
-    def __init__(self, item_id: str, item_type: str, p_list: list, algorithm: str = '', parent: QGraphicsItem = None):
-        """
-
-        :param item_id: 图元ID
-        :param item_type: 图元类型，'line'、'polygon'、'ellipse'、'curve'等
-        :param p_list: 图元参数
-        :param algorithm: 绘制算法，'DDA'、'Bresenham'、'Bezier'、'B-spline'等
-        :param parent:
-        """
-        super().__init__(parent)
-        self.id = item_id  # 图元ID
-        self.item_type = item_type  # 图元类型，'line'、'polygon'、'ellipse'、'curve'等
-        self.p_list = p_list  # 图元参数
-        self.algorithm = algorithm  # 绘制算法，'DDA'、'Bresenham'、'Bezier'、'B-spline'等
-        self.selected = False  # 当前的图元是否被选中
-        self.color = QColor(0, 0, 0)  # 图元颜色
-        self.setZValue(int(item_id))  # 设置深度，用于控制图元的上下图层关系
-        self.setFlag(QGraphicsItem.ItemIsSelectable)
-        self.is_finish = False
-
-        self.moving_control_point = -1  # 当前正在移动的控制点索引
-        self.position = None
-
-    def setFinish(self, flag):
-        self.is_finish = flag
-
-    def setSelect(self, flag: bool):
-        '''
-        设置selected位并同时设置当前的图元是否可以移动
-
-        :param flag: 为True如果当前被选中
-        :return: None
-        '''
-        self.selected = flag
-
-    def setColor(self, color: QColor):
-        self.color = color
-
-    def set_id(self, id):
-        self.id = id
-
-    def get_center(self):
-        # get the center of the current item
-        boundingRect = self.boundingRect()
-        bottom_left_point = boundingRect.bottomLeft()
-        top_right_point = boundingRect.topRight()
-        return (bottom_left_point.x() + top_right_point.x()) / 2, (bottom_left_point.y() + top_right_point.y()) / 2
-
-    def drawBoundingBox(self, painter):
-        pen = QPen(Qt.DashLine)
-        pen.setColor(Qt.blue)
-        pen.setCapStyle(Qt.FlatCap)
-        pen.setDashPattern((3, 3))
-        painter.setPen(pen)
-        painter.drawRect(self.boundingRect())
-
-    def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget] = ...) -> None:
-        painter.setPen(self.color)
-        pass
-
-    def boundingRect(self) -> QRectF:
-        pass
-
-    # 遍历所有的控制点，返回最近的一个控制点，并且距离小于阈值
-    def find_nearest_control_point(self, x, y, max_dis=30):
-        def get_dis(x, y, p):
-            return (x - p[0]) ** 2 + (y - p[1]) ** 2
-
-        min_dis = 1000000
-        min_p_index = -1
-        for index, p in enumerate(self.p_list):
-            cur_dis = get_dis(x, y, p)
-            if cur_dis <= max_dis ** 2:
-                min_dis = min(min_dis, cur_dis)
-                min_p_index = index
-
-        return min_p_index
-
-    def set_control_point(self, x, y):
-        nearest_control_point_index = self.find_nearest_control_point(x, y)
-        self.position = [x, y]
-        if nearest_control_point_index != -1:
-            self.moving_control_point = nearest_control_point_index
-            return True
-        else:
-            return False
-
-    def update_control_point(self, x, y):
-        if self.moving_control_point != -1:
-            try:
-                self.p_list[self.moving_control_point] = [x, y]
-            except IndexError:
-                print("control index out of range!")
-        else:
-            if self.position is None:
-                return
-            alg.translate(self.p_list, x - self.position[0], y - self.position[1])
-            self.position = [x, y]
-
-    def release_control_point(self):
-        if self.moving_control_point != -1:
-            self.moving_control_point = -1
-
-    def dump_as_dict(self):
-        '''
-        将当前的 item 转换为一个 dict 用于可持续化
-        :return: 转换之后的
-        '''
-        params_dict = {'id': self.id, 'type': self.item_type, 'p_list': self.p_list, 'algorithm': self.algorithm,
-                       'color': [self.color.red(), self.color.green(), self.color.blue()], 'zvalue': self.zValue()}
-        return params_dict
-
-    def clone(self):
-        item_generator = ItemFactory()
-        return item_generator.get_item(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)
-
-
-class LineItem(MyItem):
-    def __init__(self, item_id: str, item_type: str, p_list: list, algorithm: str = '', parent: QGraphicsItem = None):
-        super(LineItem, self).__init__(item_id, 'line', p_list, algorithm, parent)
-
-    def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget] = ...) -> None:
-        painter.setPen(self.color)
-        item_pixels = alg.draw_line(self.p_list, self.algorithm)
-        for p in item_pixels:
-            painter.drawPoint(*p)
-        if not self.is_finish or self.selected:
-            painter.setPen(QColor(0, 0, 0))
-            for p in self.p_list:  # 绘制控制点
-                painter.drawRect(p[0] - 4, p[1] - 4, 8, 8)
-        if self.selected:
-            self.drawBoundingBox(painter)
-
-    def boundingRect(self) -> QRectF:
-        x0, y0 = self.p_list[0]
-        x1, y1 = self.p_list[1]
-        x = min(x0, x1)
-        y = min(y0, y1)
-        w = max(x0, x1) - x
-        h = max(y0, y1) - y
-        return QRectF(x - 1, y - 1, w + 2, h + 2)
-
-
-class PolygonItem(MyItem):
-    def __init__(self, item_id: str, item_type: str, p_list: list, algorithm: str = '', parent: QGraphicsItem = None):
-        super(PolygonItem, self).__init__(item_id, 'polygon', p_list, algorithm, parent)
-        self.fill = False
-        self.fill_color = QColor(255, 255, 255)
-
-    def set_fill(self, fill_color):
-        self.fill = True
-        self.fill_color = fill_color
-
-    def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget] = ...) -> None:
-        painter.setPen(self.color)
-        item_pixels = alg.draw_polygon(self.p_list, self.algorithm, self.is_finish)
-        for p in item_pixels:
-            painter.drawPoint(*p)
-
-        # 只要是一个合格的多边形，就进行填充
-        if self.fill and len(self.p_list) >= 3:
-            pen = QPen(Qt.SolidLine)
-            pen.setColor(self.fill_color)
-            painter.setPen(pen)
-            points = alg.polygon_fill_line(self.p_list, 1000)
-            for p in points:
-                [start, end] = p
-                painter.drawLine(start[0], start[1], end[0], end[1])
-                # painter.drawPoint(*p)
-
-        if self.selected:
-            pen = QPen(Qt.DashLine)
-            pen.setColor(Qt.blue)
-            pen.setCapStyle(Qt.FlatCap)
-            pen.setDashPattern((3, 3))
-            painter.setPen(pen)
-            painter.drawRect(self.boundingRect())
-
-            ### 测试多边形填充
-
-        if not self.is_finish or self.selected:
-            painter.setPen(QColor(0, 0, 0))
-            for p in self.p_list:  # 绘制控制点
-                painter.drawRect(p[0] - 4, p[1] - 4, 8, 8)
-
-    def boundingRect(self) -> QRectF:
-        x0, y0 = self.p_list[0]
-        x, y, w, h = x0, y0, x0, y0
-        for (X, Y) in self.p_list:
-            x = min(x, X)
-            y = min(y, Y)
-            w = max(w, X)
-            h = max(h, Y)
-        w -= x
-        h -= y
-        return QRectF(x - 1, y - 1, w + 2, h + 2)
-
-    def clone(self):  # 重载以实现填充的复制
-        tem = super(PolygonItem, self).clone()
-        if self.fill:
-            tem.set_fill(self.fill_color)
-        return tem
-
-    def dump_as_dict(self):  # 记录是否填充的信息
-        tem = super(PolygonItem, self).dump_as_dict()
-        tem["fill"] = self.fill
-        tem["fill_color"] = [self.fill_color.red(), self.fill_color.green(), self.fill_color.blue()]
-        return tem
-
-
-class EllipseItem(MyItem):
-    def __init__(self, item_id: str, item_type: str, p_list: list, algorithm: str = '', parent: QGraphicsItem = None):
-        super(EllipseItem, self).__init__(item_id, 'ellipse', p_list, algorithm, parent)
-        self.paint_list = copy.deepcopy(self.p_list)
-
-    def setPaintList(self):
-        x1, y1 = self.p_list[0]
-        x2, y2 = self.p_list[1]
-        self.paint_list[0] = [min(x1, x2), max(y1, y2)]
-        self.paint_list[1] = [max(x1, x2), min(y1, y2)]
-
-    def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget] = ...) -> None:
-        painter.setPen(self.color)
-        item_pixels = alg.draw_ellipse(self.paint_list)
-        for p in item_pixels:
-            painter.drawPoint(*p)
-        if not self.is_finish or self.selected:
-            painter.setPen(QColor(0, 0, 0))
-            for p in self.p_list:  # 绘制控制点
-                painter.drawRect(p[0] - 4, p[1] - 4, 8, 8)
-        if self.selected:
-            self.drawBoundingBox(painter)
-
-    def boundingRect(self) -> QRectF:
-        x0, y0 = self.p_list[0]
-        x1, y1 = self.p_list[1]
-        return QRectF(x0 - 1, y1 - 1, x1 - x0 + 2, y0 - y1 + 2)
-
-    def update_control_point(self, x, y):
-        super().update_control_point(x, y)
-        self.setPaintList()
-
-
-class CurveItem(MyItem):
-    def __init__(self, item_id: str, item_type: str, p_list: list, algorithm: str = '', parent: QGraphicsItem = None):
-        super(CurveItem, self).__init__(item_id, 'curve', p_list, algorithm, parent)
-
-    def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget] = ...) -> None:
-        painter.setPen(self.color)
-        item_pixels = None
-        if self.algorithm != 'B-spline' or len(self.p_list) >= 4:  # 需要注意三次b样条曲线需要至少四个控制点
-            item_pixels = alg.draw_curve(self.p_list, self.algorithm)
-        if item_pixels is not None:
-            for p in item_pixels:
-                painter.drawPoint(*p)
-        if not self.is_finish or self.selected:
-            painter.setPen(QColor(0, 0, 0))
-            for p in self.p_list:  # 绘制控制点
-                painter.drawRect(p[0] - 4, p[1] - 4, 8, 8)
-
-            pen = QPen(Qt.DashLine)
-            pen.setColor(Qt.blue)
-            pen.setCapStyle(Qt.FlatCap)
-            pen.setDashPattern((3, 3))
-            painter.setPen(pen)
-
-            for index in range(len(self.p_list) - 1):
-                painter.drawLine(self.p_list[index][0], self.p_list[index][1], self.p_list[index + 1][0],
-                                 self.p_list[index + 1][1])
-        if self.selected:
-            self.drawBoundingBox(painter)
-
-    def boundingRect(self) -> QRectF:
-        x0, y0 = self.p_list[0]
-        x, y, w, h = x0, y0, x0, y0
-        for (X, Y) in self.p_list:
-            x = min(x, X)
-            y = min(y, Y)
-            w = max(w, X)
-            h = max(h, Y)
-        w -= x
-        h -= y
-        return QRectF(x - 1, y - 1, w + 2, h + 2)
-
-
 class ClipRectangle(QGraphicsItem):
     def __init__(self, x=0, y=0, w=100, h=100):
         super(ClipRectangle, self).__init__()
@@ -1472,34 +1164,34 @@ class MainWindow(QMainWindow):
         draw_menu = menubar.addMenu('绘制')
         line_menu = draw_menu.addMenu('线段')
         line_naive_act = line_menu.addAction('Naive')
-        line_naive_act.setIcon(QIcon('../other_folder/other_folder/line.ico'))
+        line_naive_act.setIcon(QIcon('../../other_folder/other_folder/line.ico'))
         line_dda_act = line_menu.addAction('DDA')
-        line_dda_act.setIcon(QIcon('../other_folder/other_folder/line.ico'))
+        line_dda_act.setIcon(QIcon('../../other_folder/other_folder/line.ico'))
         line_bresenham_act = line_menu.addAction('Bresenham')
-        line_bresenham_act.setIcon(QIcon('../other_folder/other_folder/line.ico'))
+        line_bresenham_act.setIcon(QIcon('../../other_folder/other_folder/line.ico'))
         polygon_menu = draw_menu.addMenu('多边形')
         polygon_dda_act = polygon_menu.addAction('DDA')
         polygon_bresenham_act = polygon_menu.addAction('Bresenham')
         ellipse_act = draw_menu.addAction('椭圆')
         curve_menu = draw_menu.addMenu('曲线')
         curve_bezier_act = curve_menu.addAction('Bezier')
-        curve_bezier_act.setIcon(QIcon('../other_folder/other_folder/curve.ico'))
+        curve_bezier_act.setIcon(QIcon('../../other_folder/other_folder/curve.ico'))
         curve_b_spline_act = curve_menu.addAction('B-spline')
-        curve_b_spline_act.setIcon(QIcon('../other_folder/other_folder/curve.ico'))
+        curve_b_spline_act.setIcon(QIcon('../../other_folder/other_folder/curve.ico'))
         edit_menu = menubar.addMenu('编辑')
         translate_act = edit_menu.addAction('平移')
-        translate_act.setIcon(QIcon('../other_folder/other_folder/translate.ico'))
+        translate_act.setIcon(QIcon('../../other_folder/other_folder/translate.ico'))
         rotate_act = edit_menu.addAction('旋转')
-        rotate_act.setIcon(QIcon('../other_folder/other_folder/rotate.ico'))
+        rotate_act.setIcon(QIcon('../../other_folder/other_folder/rotate.ico'))
         scale_act = edit_menu.addAction('缩放')
-        scale_act.setIcon(QIcon('../other_folder/other_folder/scale.ico'))
+        scale_act.setIcon(QIcon('../../other_folder/other_folder/scale.ico'))
         clip_menu = edit_menu.addMenu('裁剪')
         clip_cohen_sutherland_act = clip_menu.addAction('Cohen-Sutherland')
-        clip_cohen_sutherland_act.setIcon(QIcon('../other_folder/other_folder/clip.ico'))
+        clip_cohen_sutherland_act.setIcon(QIcon('../../other_folder/other_folder/clip.ico'))
         clip_liang_barsky_act = clip_menu.addAction('Liang-Barsky')
-        clip_liang_barsky_act.setIcon(QIcon('../other_folder/other_folder/clip.ico'))
+        clip_liang_barsky_act.setIcon(QIcon('../../other_folder/other_folder/clip.ico'))
         fill_act = edit_menu.addAction('填充多边形')
-        fill_act.setIcon(QIcon('../other_folder/other_folder/paint_bucket.png'))
+        fill_act.setIcon(QIcon('../../other_folder/other_folder/paint_bucket.png'))
 
         # 连接信号和槽函数
         reset_canvas_act.triggered.connect(lambda: self.reset_canvas_action())
@@ -1514,11 +1206,11 @@ class MainWindow(QMainWindow):
         line_bresenham_act.triggered.connect(lambda: self.line_action('Bresenham'))
         line_dda_act.triggered.connect(lambda: self.line_action('DDA'))
         polygon_dda_act.triggered.connect(lambda: self.polygon_action('DDA'))
-        polygon_dda_act.setIcon(QIcon('../other_folder/other_folder/polygon.ico'))
+        polygon_dda_act.setIcon(QIcon('../../other_folder/other_folder/polygon.ico'))
         polygon_bresenham_act.triggered.connect(lambda: self.polygon_action('Bresenham'))
-        polygon_bresenham_act.setIcon(QIcon('../other_folder/other_folder/polygon.ico'))
+        polygon_bresenham_act.setIcon(QIcon('../../other_folder/other_folder/polygon.ico'))
         ellipse_act.triggered.connect(lambda: self.ellipse_action())
-        ellipse_act.setIcon(QIcon('../other_folder/other_folder/ellipse.ico'))
+        ellipse_act.setIcon(QIcon('../../other_folder/other_folder/ellipse.ico'))
         curve_bezier_act.triggered.connect(lambda: self.curve_action('Bezier'))
         curve_b_spline_act.triggered.connect(lambda: self.curve_action('B-spline'))
 
@@ -1532,11 +1224,11 @@ class MainWindow(QMainWindow):
         tool_bar = self.addToolBar('选择')
         mouse_selection_act = tool_bar.addAction('选择')
         mouse_selection_act.triggered.connect(lambda: self.mouse_selection())
-        mouse_selection_act.setIcon(QIcon('../other_folder/other_folder/mouse.ico'))
+        mouse_selection_act.setIcon(QIcon('../../other_folder/other_folder/mouse.ico'))
 
         tool_bar = self.addToolBar('颜色')
         tool_bar.addAction(set_pen_act)
-        set_pen_act.setIcon(QIcon('../other_folder/other_folder/pen.ico'))
+        set_pen_act.setIcon(QIcon('../../other_folder/other_folder/pen.ico'))
 
         tool_bar = self.addToolBar('线段')
         tool_bar.addAction(line_dda_act)
@@ -1578,7 +1270,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage('空闲')
         self.resize(600, 600)
         self.setWindowTitle('Pretty Printer')
-        self.setWindowIcon(QIcon('../other_folder/other_folder/cover.png'))
+        self.setWindowIcon(QIcon('../../other_folder/other_folder/cover.png'))
 
     def get_id(self):
         # 该方法已经被弃用
