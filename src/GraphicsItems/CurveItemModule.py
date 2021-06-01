@@ -1,3 +1,4 @@
+import copy
 from typing import Optional
 
 from PyQt5.QtCore import QRectF,Qt
@@ -49,3 +50,5 @@ class CurveItem(PPItem):
         h -= y
         return QRectF(x - 1, y - 1, w + 2, h + 2)
 
+    def clone(self):
+        return CurveItem(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)

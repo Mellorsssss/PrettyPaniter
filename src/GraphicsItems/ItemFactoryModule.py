@@ -2,6 +2,7 @@ from GraphicsItems.LineItemModule import LineItem
 from GraphicsItems.PolygonItemModule import PolygonItem
 from GraphicsItems.EllipseItemModule import EllipseItem
 from GraphicsItems.CurveItemModule import CurveItem
+from GraphicsItems.CompositeItemModule import CompositeItem
 
 
 class ItemFactory:
@@ -21,4 +22,6 @@ class ItemFactory:
             return EllipseItem(item_id, item_type, p_list, algorithm)
         elif item_type == 'curve':
             return CurveItem(item_id, item_type, p_list, algorithm)
+        elif item_type == 'composite':
+            return CompositeItem(item_id, item_type, p_list, algorithm)
 

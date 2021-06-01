@@ -38,3 +38,10 @@ class EllipseItem(PPItem):
     def update_control_point(self, x, y):
         super().update_control_point(x, y)
         self.setPaintList()
+
+    def clone(self):
+        return EllipseItem(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)
+
+    def translate(self, dx, dy):
+        self.p_list = alg.translate(self.p_list, dx, dy)
+        self.setPaintList()

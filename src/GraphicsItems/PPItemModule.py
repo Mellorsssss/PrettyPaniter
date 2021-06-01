@@ -3,8 +3,6 @@ from PyQt5.QtCore import QRectF,Qt
 from PyQt5.QtGui import QColor, QPen, QPainter
 from PyQt5.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from algorithms import cg_algorithms as alg
-from GraphicsItems.ItemFactoryModule import ItemFactory
-import copy
 
 
 class PPItem(QGraphicsItem):
@@ -37,6 +35,7 @@ class PPItem(QGraphicsItem):
 
     def setFinish(self, flag):
         self.is_finish = flag
+        return self
 
     def setSelect(self, flag: bool):
         '''
@@ -46,12 +45,15 @@ class PPItem(QGraphicsItem):
         :return: None
         '''
         self.selected = flag
+        return self
 
     def setColor(self, color: QColor):
         self.color = color
+        return self
 
-    def set_id(self, id):
+    def setId(self, id):
         self.id = id
+        return self
 
     def get_center(self):
         # get the center of the current item
@@ -126,5 +128,13 @@ class PPItem(QGraphicsItem):
         return params_dict
 
     def clone(self):
-        item_generator = ItemFactory()
-        return item_generator.get_item(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)
+        '''
+        prototype pattern, abstract clone method
+        sub class will override this method
+        :return: cloned object
+        '''
+        pass
+
+    def translate(self, dx, dy):
+        self.p_list = alg.translate(self.p_list, dx, dy)
+

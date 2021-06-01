@@ -5,7 +5,6 @@ import os
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import math
 import json
-from GraphicsItems import *
 from algorithms import cg_algorithms as alg
 from GraphicsItems.ItemFactoryModule import ItemFactory
 from typing import Optional
@@ -194,7 +193,7 @@ class MyCanvas(QGraphicsView):
         except:
             print("load failure")
             return
-        self.main_window.set_id(max_key + 1)
+        self.main_window.setId(max_key + 1)
         self.temp_id = self.main_window.get_id()
 
     def copy(self):
@@ -207,13 +206,20 @@ class MyCanvas(QGraphicsView):
             msg_box.exec_()
             return
 
+        if self.clipboard is not None:
+            test = ItemFactory().get_item(99999, 'composite', None, None)
+            test.appendItem(self.clipboard)
+            test.appendItem(self.selected_item.clone()
+                            .setColor(self.selected_item.color)
+                            .setFinish(True)
+                            .setId(self.main_window.get_id()))
+            self.item_dict[test.id] = test
+            self.scene().addItem(test)
+            self.scene().update()
+
+
         self.clipboard = self.selected_item.clone()
-        self.clipboard.set_id(self.main_window.get_id())
-        # self.item_factory.get_item(self.main_window.get_id(),
-        #                                         self.selected_item.item_type,
-        #                                         copy.deepcopy(self.selected_item.p_list),
-        #                                         self.selected_item.algorithm)
-        # self.clipboard = copy.deepcopy(self.selected_item)
+        self.clipboard.setId(self.main_window.get_id())
         self.clipboard.setColor(self.selected_item.color)  # 颜色也要拷贝
         self.clipboard.setFinish(True)  # 设置当前的图元为已经绘制完成
 
@@ -242,7 +248,7 @@ class MyCanvas(QGraphicsView):
         # 更新clipboard为一个新的图元
         temp_color = self.clipboard.color
         self.clipboard = self.clipboard.clone()
-        self.clipboard.set_id(self.main_window.get_id())
+        self.clipboard.setId(self.main_window.get_id())
         # self.clipboard = self.item_factory.get_item(self.main_window.get_id(),
         #                                             self.clipboard.item_type,
         #                                             copy.deepcopy(self.clipboard.p_list),
@@ -330,9 +336,7 @@ class MyCanvas(QGraphicsView):
         if not self.has_select_item():
             return
 
-        self.selected_item.p_list = alg.translate(self.selected_item.p_list, dx, dy)
-        if self.selected_item.item_type == 'ellipse':  # 椭圆需要额外设置绘制的点
-            self.selected_item.setPaintList()
+        self.selected_item.translate(dx, dy)
         self.updateScene([self.sceneRect()])
 
     def rotate(self, xc, yc, r):
@@ -1133,7 +1137,6 @@ class MainWindow(QMainWindow):
         self.init_layout()
 
     def init_items(self):
-        # 使用QListWidget来记录已有的图元，并用于选择图元。注：这是图元选择的简单实现方法，更好的实现是在画布中直接用鼠标选择图元
         self.item_list = []
 
         # 使用QGraphicsView作为画布

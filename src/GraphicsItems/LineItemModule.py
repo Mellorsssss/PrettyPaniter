@@ -4,6 +4,7 @@ from PyQt5.QtGui import QPainter, QColor
 from algorithms import cg_algorithms as alg
 from PyQt5.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from GraphicsItems.PPItemModule import PPItem
+import copy
 
 
 class LineItem(PPItem):
@@ -30,3 +31,6 @@ class LineItem(PPItem):
         w = max(x0, x1) - x
         h = max(y0, y1) - y
         return QRectF(x - 1, y - 1, w + 2, h + 2)
+
+    def clone(self):
+        return LineItem(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)

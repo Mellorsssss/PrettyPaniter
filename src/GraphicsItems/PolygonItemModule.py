@@ -4,7 +4,7 @@ from algorithms import cg_algorithms as alg
 from PyQt5.QtCore import QRectF,Qt
 from PyQt5.QtGui import QPainter, QPen, QColor
 from PyQt5.QtWidgets import QGraphicsItem, QWidget, QStyleOptionGraphicsItem
-
+import copy
 
 class PolygonItem(PPItem):
     def __init__(self, item_id: str, item_type: str, p_list: list, algorithm: str = '', parent: QGraphicsItem = None):
@@ -15,6 +15,7 @@ class PolygonItem(PPItem):
     def set_fill(self, fill_color):
         self.fill = True
         self.fill_color = fill_color
+        return self
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget] = ...) -> None:
         painter.setPen(self.color)
@@ -61,9 +62,10 @@ class PolygonItem(PPItem):
         return QRectF(x - 1, y - 1, w + 2, h + 2)
 
     def clone(self):  # 重载以实现填充的复制
-        tem = super(PolygonItem, self).clone()
+        tem = PolygonItem(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)
         if self.fill:
             tem.set_fill(self.fill_color)
+
         return tem
 
     def dump_as_dict(self):  # 记录是否填充的信息
