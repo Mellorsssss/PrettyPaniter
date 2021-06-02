@@ -33,4 +33,7 @@ class LineItem(PPItem):
         return QRectF(x - 1, y - 1, w + 2, h + 2)
 
     def clone(self):
-        return LineItem(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)
+        cloned_obj = LineItem(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)
+        cloned_obj.setFinish(True)\
+            .setColor(self.color)
+        return cloned_obj

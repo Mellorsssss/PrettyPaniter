@@ -62,11 +62,12 @@ class PolygonItem(PPItem):
         return QRectF(x - 1, y - 1, w + 2, h + 2)
 
     def clone(self):  # 重载以实现填充的复制
-        tem = PolygonItem(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)
+        cloned_obj = PolygonItem(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)
         if self.fill:
-            tem.set_fill(self.fill_color)
-
-        return tem
+            cloned_obj.set_fill(self.fill_color)
+        cloned_obj.setFinish(True) \
+            .setColor(self.color)
+        return cloned_obj
 
     def dump_as_dict(self):  # 记录是否填充的信息
         tem = super(PolygonItem, self).dump_as_dict()

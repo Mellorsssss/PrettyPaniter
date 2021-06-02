@@ -151,4 +151,3 @@ class PPItem(QGraphicsItem):
 
     def end_draw(self):
         pass
-

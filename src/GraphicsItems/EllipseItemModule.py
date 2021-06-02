@@ -40,7 +40,10 @@ class EllipseItem(PPItem):
         self.setPaintList()
 
     def clone(self):
-        return EllipseItem(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)
+        cloned_obj =  EllipseItem(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)
+        cloned_obj.setFinish(True) \
+            .setColor(self.color)
+        return cloned_obj
 
     def translate(self, dx, dy):
         self.p_list = alg.translate(self.p_list, dx, dy)

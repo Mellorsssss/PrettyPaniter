@@ -7,6 +7,7 @@ import math
 import json
 from algorithms import cg_algorithms as alg
 from GraphicsItems.ItemFactoryModule import ItemFactory
+from GraphicsItems.PPItemModule import PPItem
 from typing import Optional
 from PyQt5.QtWidgets import (
     QApplication,
@@ -35,7 +36,7 @@ import numpy as np
 from PIL import Image
 
 
-class MyCanvas(QGraphicsView):
+class PPCanvas(QGraphicsView):
     """
     画布窗体类，继承自QGraphicsView，采用QGraphicsView、QGraphicsScene、QGraphicsItem的绘图框架
     """
@@ -43,10 +44,11 @@ class MyCanvas(QGraphicsView):
     def __init__(self, *args):
         super().__init__(*args)
         self.setFocusPolicy(Qt.StrongFocus)
-        self.queue_pos = 0
+        self.queue_pos = 0 # TODO: move this to concrete item
         self.main_window = None
         self.item_dict = {}
         self.selected_id = ''
+        self.id_count = 0
 
         self.status = 'mouse'
         self.clip_rect = None
@@ -56,19 +58,33 @@ class MyCanvas(QGraphicsView):
         self.selected_item = None
         self.pen_color = QColor(0, 0, 0)
 
-        self.item_factory = ItemFactory()  # 图元工厂类，用于生成各种类型的图元
-        self.clipboard = None  # 剪切板，记录已经被复制的元素
+        self.item_factory:ItemFactory = ItemFactory()  # 图元工厂类，用于生成各种类型的图元
+        self.clipboard: PPItem = None  # 剪切板，记录已经被复制的元素
 
         self.verticalScrollBar().setVisible(False)
         self.horizontalScrollBar().setVisible(False)
 
         self.max_z = 999
 
-    ###### 保存、删除等功能 ######
+    def get_id(self):
+        ret: int = self.id_count
+        self.id_count += 1
+        return ret
+
+    def set_id(self, _id):
+        self.id_count = max(self.id_count, _id)
+
+    ###### persistence of the items ######
     def remove_item(self, id):
         self.clear_selection()
         self.scene().removeItem(self.item_dict[id])
         del self.item_dict[id]
+        self.updateScene([self.sceneRect()])
+
+    def add_item(self, id, item):
+        self.item_dict[id] = item
+        self.scene().addItem(item)
+        self.scene().update()
         self.updateScene([self.sceneRect()])
 
     def remove_all(self):
@@ -188,13 +204,12 @@ class MyCanvas(QGraphicsView):
                 if new_item.item_type == 'polygon':
                     if item["fill"]:
                         new_item.set_fill(QColor(item['fill_color'][0], item['fill_color'][1], item['fill_color'][2]))
-                self.scene().addItem(new_item)
-                self.item_dict[key] = new_item
+                self.add_item(key, new_item)
         except:
             print("load failure")
             return
-        self.main_window.setId(max_key + 1)
-        self.temp_id = self.main_window.get_id()
+        self.set_id(max_key + 1)
+        self.temp_id = self.get_id()
 
     def copy(self):
         if self.selected_item is None:
@@ -206,22 +221,18 @@ class MyCanvas(QGraphicsView):
             msg_box.exec_()
             return
 
+        # TODO: test code of the Composite item
         if self.clipboard is not None:
             test = ItemFactory().get_item(99999, 'composite', None, None)
             test.appendItem(self.clipboard)
             test.appendItem(self.selected_item.clone()
                             .setColor(self.selected_item.color)
                             .setFinish(True)
-                            .setId(self.main_window.get_id()))
-            self.item_dict[test.id] = test
-            self.scene().addItem(test)
-            self.scene().update()
-
+                            .setId(self.get_id()))
+            self.add_item(test.id, test)
 
         self.clipboard = self.selected_item.clone()
-        self.clipboard.setId(self.main_window.get_id())
-        self.clipboard.setColor(self.selected_item.color)  # 颜色也要拷贝
-        self.clipboard.setFinish(True)  # 设置当前的图元为已经绘制完成
+        self.clipboard.setId(self.get_id())
 
     def paste(self, dx=10, dy=10):
         '''
@@ -235,26 +246,15 @@ class MyCanvas(QGraphicsView):
             msg_box = QMessageBox(QMessageBox.Warning, '复制错误', '图元超过30个，暂不支持继续粘贴')
             msg_box.exec_()
             return
+
         if self.clipboard is None:
             return
-        alg.translate(self.clipboard.p_list, 30, 30)
-        if self.clipboard.item_type == 'ellipse':
-            self.clipboard.setPaintList()
-        self.item_dict[self.clipboard.id] = self.clipboard
-        self.scene().addItem(self.clipboard)
-        self.scene().update()
-        self.updateScene([self.sceneRect()])
+        self.clipboard.translate(30, 30)
+        self.add_item(self.clipboard.id, self.clipboard)
 
-        # 更新clipboard为一个新的图元
-        temp_color = self.clipboard.color
+        # update clipboard
         self.clipboard = self.clipboard.clone()
-        self.clipboard.setId(self.main_window.get_id())
-        # self.clipboard = self.item_factory.get_item(self.main_window.get_id(),
-        #                                             self.clipboard.item_type,
-        #                                             copy.deepcopy(self.clipboard.p_list),
-        #                                             self.clipboard.algorithm)
-        self.clipboard.setColor(temp_color)  # 颜色也要拷贝
-        self.clipboard.setFinish(True)
+        self.clipboard.setId(self.get_id())
 
     def add_clip_rect(self, x_min, y_min, x_max, y_max):
         if x_min > x_max:
@@ -343,7 +343,7 @@ class MyCanvas(QGraphicsView):
     def clip(self, x_min, y_min, x_max, y_max, algorithm):
         if not self.has_select_item():
             return
-
+        # TODO: modify the interface
         cliped_p_list = alg.clip(self.selected_item.p_list, x_min, y_min, x_max,
                                  y_max, algorithm)
         if cliped_p_list is None:
@@ -389,7 +389,7 @@ class MyCanvas(QGraphicsView):
             self.finish_draw()
 
     def finish_draw(self):
-        self.temp_id = self.main_window.get_id()
+        self.temp_id = self.get_id()
         self.temp_item = None
 
     ###### 系统状态机维护 ######
@@ -1125,7 +1125,7 @@ class MainWindow(QMainWindow):
         # 使用QGraphicsView作为画布
         self.scene = QGraphicsScene(self)
         self.scene.setSceneRect(0, 0, 800, 800)
-        self.canvas_widget = MyCanvas(self.scene, self)
+        self.canvas_widget = PPCanvas(self.scene, self)
         self.canvas_widget.setFixedSize(800, 800)
         self.canvas_widget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvas_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -1258,15 +1258,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('Pretty Printer')
         self.setWindowIcon(QIcon('../../other_folder/other_folder/cover.png'))
 
-    def get_id(self):
-        # 该方法已经被弃用
-        _id = str(self.item_cnt)
-        self.item_cnt += 1
-        return _id
-
-    def set_id(self, cnt):
-        self.item_cnt = cnt
-
     def pen_color_action(self):
         color = QColorDialog.getColor()
         self.canvas_widget.setPenColor(color)
@@ -1296,19 +1287,19 @@ class MainWindow(QMainWindow):
 
     def line_action(self, algorithm='Naive'):
         # self.canvas_widget.start_draw_line(algorithm, self.get_id())
-        self.canvas_widget.start_draw('line', algorithm, self.get_id())
+        self.canvas_widget.start_draw('line', algorithm, self.canvas_widget.get_id())
         self.statusBar().showMessage(algorithm + '算法绘制线段')
         self.canvas_widget.clear_selection()
 
     def polygon_action(self, algorithm='DDA'):
         # self.canvas_widget.start_draw_polygon(algorithm, self.get_id())
-        self.canvas_widget.start_draw('polygon', algorithm, self.get_id())
+        self.canvas_widget.start_draw('polygon', algorithm, self.canvas_widget.get_id())
         self.statusBar().showMessage(algorithm + '算法绘制多边形')
         self.canvas_widget.clear_selection()
 
     def ellipse_action(self):
         # self.canvas_widget.start_draw_ellipse(self.get_id())
-        self.canvas_widget.start_draw('ellipse', None, self.get_id())
+        self.canvas_widget.start_draw('ellipse', None, self.canvas_widget.get_id())
         self.statusBar().showMessage('中点画圆分绘制椭圆')
         self.canvas_widget.clear_selection()
 
@@ -1319,7 +1310,7 @@ class MainWindow(QMainWindow):
         :return:
         '''
         # self.canvas_widget.start_draw_curve(algorithm, self.get_id())
-        self.canvas_widget.start_draw('curve', algorithm, self.get_id())
+        self.canvas_widget.start_draw('curve', algorithm, self.canvas_widget.get_id())
         self.statusBar().showMessage(algorithm + '算法绘制曲线')
         self.canvas_widget.clear_selection()
 

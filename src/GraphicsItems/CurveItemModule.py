@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from GraphicsItems.PPItemModule import PPItem
 
 
-
 class CurveItem(PPItem):
     def __init__(self, item_id: str, item_type: str, p_list: list, algorithm: str = '', parent: QGraphicsItem = None):
         super(CurveItem, self).__init__(item_id, 'curve', p_list, algorithm, parent)
@@ -51,4 +50,7 @@ class CurveItem(PPItem):
         return QRectF(x - 1, y - 1, w + 2, h + 2)
 
     def clone(self):
-        return CurveItem(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)
+        cloned_obj =  CurveItem(self.id, self.item_type, copy.deepcopy(self.p_list), self.algorithm)
+        cloned_obj.setFinish(True) \
+            .setColor(self.color)
+        return cloned_obj
