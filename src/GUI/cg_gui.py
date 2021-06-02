@@ -114,7 +114,11 @@ class PPCanvas(QGraphicsView):
         command.undo()
 
     def get_context(self):
-        return copy.copy(self.item_dict)
+        cloned_dict = {}
+        for key, item in self.item_dict.items():
+            cloned_dict[key] = item.clone()
+        return cloned_dict
+        # return copy.copy(self.item_dict) # quick way
 
     def set_context(self, context):
         self.remove_all()
@@ -722,7 +726,6 @@ class PPCanvas(QGraphicsView):
 
         self.updateScene([self.sceneRect()])
         super().keyPressEvent(event)
-
 
 
 class ClipRectangle(QGraphicsItem):
