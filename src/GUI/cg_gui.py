@@ -343,18 +343,14 @@ class MyCanvas(QGraphicsView):
         if not self.has_select_item():
             return
 
-        if self.selected_item.item_type == 'ellipse':  # 椭圆不进行旋转
-            return
-        self.selected_item.p_list = alg.rotate(self.selected_item.p_list, xc, yc, r)
+        self.selected_item.rotate(xc, yc, r)
         self.updateScene([self.sceneRect()])
 
     def scale(self, xc, yc, s):
         if not self.has_select_item():
             return
 
-        self.item_dict[self.selected_id].p_list = alg.scale(self.selected_item.p_list, xc, yc, s)
-        if self.selected_item.item_type == 'ellipse':
-            self.selected_item.setPaintList()
+        self.selected_item.scale(xc, yc, s)
         self.updateScene([self.sceneRect()])
 
     def clip(self, x_min, y_min, x_max, y_max, algorithm):

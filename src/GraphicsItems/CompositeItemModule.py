@@ -61,5 +61,10 @@ class CompositeItem(PPItem):
         for item in self.itemList:
             item.translate(dx, dy)
 
+    def rotate(self, xc, yc, r):
+        for item in self.itemList:
+            item.rotate(xc, yc, r)
 
-
+    def scale(self, xc, yc, s):
+        for item in self.itemList:
+            item.scale(xc, yc, s)

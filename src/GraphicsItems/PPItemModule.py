@@ -138,3 +138,9 @@ class PPItem(QGraphicsItem):
     def translate(self, dx, dy):
         self.p_list = alg.translate(self.p_list, dx, dy)
 
+    def rotate(self, xc, yc, r):
+        self.p_list = alg.rotate(self.p_list, xc, yc, r)
+
+    def scale(self, xc, yc, s):
+        self.p_list = alg.scale(self.p_list, xc, yc, s)
+

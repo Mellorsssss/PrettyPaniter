@@ -45,3 +45,13 @@ class EllipseItem(PPItem):
     def translate(self, dx, dy):
         self.p_list = alg.translate(self.p_list, dx, dy)
         self.setPaintList()
+
+    def rotate(self, xc, yc, r):
+        pass
+
+    def scale(self, xc, yc, s):
+        self.p_list = alg.scale(self.p_list, xc, yc, s)
+
+    def scale(self, xc, yc, s):
+        self.p_list = alg.scale(self.p_list, xc, yc, s)
+        self.setPaintList()
