@@ -79,7 +79,7 @@ class PPItem(QGraphicsItem):
 
     # traverse all the control points and find the one which is near to (x, y)
     # max_dis is the min distance between the control points and (x,y)
-    def find_nearest_control_point(self, x, y, max_dis=30):
+    def __find_nearest_control_point(self, x, y, max_dis=30):
         def get_dis(x, y, p):
             return (x - p[0]) ** 2 + (y - p[1]) ** 2
 
@@ -94,7 +94,7 @@ class PPItem(QGraphicsItem):
         return min_p_index
 
     def set_control_point(self, x, y):
-        nearest_control_point_index = self.find_nearest_control_point(x, y)
+        nearest_control_point_index = self.__find_nearest_control_point(x, y)
         self.position = [x, y]
         if nearest_control_point_index != -1:
             self.moving_control_point = nearest_control_point_index
@@ -135,6 +135,7 @@ class PPItem(QGraphicsItem):
         '''
         pass
 
+    # translation on item
     def translate(self, dx, dy):
         self.p_list = alg.translate(self.p_list, dx, dy)
 
@@ -143,4 +144,11 @@ class PPItem(QGraphicsItem):
 
     def scale(self, xc, yc, s):
         self.p_list = alg.scale(self.p_list, xc, yc, s)
+
+    # drawing functions of item
+    def start_draw(self):
+        pass
+
+    def end_draw(self):
+        pass
 

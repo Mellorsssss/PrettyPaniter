@@ -45,14 +45,19 @@ class CompositeItem(PPItem):
         cloned_object.itemList = [item.clone() for item in self.itemList]  # deep copy every item in itemlist
         return cloned_object
 
-    def find_nearest_control_point(self, x, y, max_dis=30):
+    def __find_nearest_control_point(self, x, y, max_dis=30):
         pass
 
     def set_control_point(self, x, y):
-        pass
+        self.position = [x,y]
 
     def update_control_point(self, x, y):
-        pass
+        if self.position is None:
+            return
+        for item in self.itemList:
+            item.translate(x-self.position[0], y - self.position[1])
+
+        self.position = [x, y]
 
     def release_control_point(self):
         pass
@@ -68,3 +73,6 @@ class CompositeItem(PPItem):
     def scale(self, xc, yc, s):
         for item in self.itemList:
             item.scale(xc, yc, s)
+
+    def dump_as_dict(self):
+        pass

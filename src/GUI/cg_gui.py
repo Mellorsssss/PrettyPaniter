@@ -309,25 +309,9 @@ class MyCanvas(QGraphicsView):
     def get_status(self):
         return self.status
 
-    ###### 图元的绘制方法 ######
-    def start_draw_line(self, algorithm, item_id):
-        self.setStatus('line')
-        self.temp_algorithm = algorithm
-        self.temp_id = item_id
-
-    def start_draw_polygon(self, algorithm, item_id):
-        self.setStatus('polygon')
-        self.temp_algorithm = algorithm
-        self.temp_id = item_id
-        self.queue_pos = -1
-
-    def start_draw_ellipse(self, item_id):
-        self.setStatus('ellipse')
-        self.temp_algorithm = None
-        self.temp_id = item_id
-
-    def start_draw_curve(self, algorithm, item_id):
-        self.setStatus('curve')
+    ###### drawing functions ######
+    def start_draw(self, status, algorithm, item_id):
+        self.setStatus(status)
         self.temp_algorithm = algorithm
         self.temp_id = item_id
         self.queue_pos = -1
@@ -408,7 +392,7 @@ class MyCanvas(QGraphicsView):
     ###### 系统状态机维护 ######
     def status_changed(self):
         '''
-        canvas的状态转移方程
+        canvas的状态转移
         :return:
         '''
         if self.status == 'polygon':
@@ -1308,17 +1292,20 @@ class MainWindow(QMainWindow):
             self.canvas_widget.save_all_as_bmp(save_path + '.bmp')
 
     def line_action(self, algorithm='Naive'):
-        self.canvas_widget.start_draw_line(algorithm, self.get_id())
+        # self.canvas_widget.start_draw_line(algorithm, self.get_id())
+        self.canvas_widget.start_draw('line', algorithm, self.get_id())
         self.statusBar().showMessage(algorithm + '算法绘制线段')
         self.canvas_widget.clear_selection()
 
     def polygon_action(self, algorithm='DDA'):
-        self.canvas_widget.start_draw_polygon(algorithm, self.get_id())
+        # self.canvas_widget.start_draw_polygon(algorithm, self.get_id())
+        self.canvas_widget.start_draw('polygon', algorithm, self.get_id())
         self.statusBar().showMessage(algorithm + '算法绘制多边形')
         self.canvas_widget.clear_selection()
 
     def ellipse_action(self):
-        self.canvas_widget.start_draw_ellipse(self.get_id())
+        # self.canvas_widget.start_draw_ellipse(self.get_id())
+        self.canvas_widget.start_draw('ellipse', None, self.get_id())
         self.statusBar().showMessage('中点画圆分绘制椭圆')
         self.canvas_widget.clear_selection()
 
@@ -1328,7 +1315,8 @@ class MainWindow(QMainWindow):
         :param algorithm: 使用的算法
         :return:
         '''
-        self.canvas_widget.start_draw_curve(algorithm, self.get_id())
+        # self.canvas_widget.start_draw_curve(algorithm, self.get_id())
+        self.canvas_widget.start_draw('curve', algorithm, self.get_id())
         self.statusBar().showMessage(algorithm + '算法绘制曲线')
         self.canvas_widget.clear_selection()
 
