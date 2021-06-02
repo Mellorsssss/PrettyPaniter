@@ -1,1 +1,5 @@
-{"0": {"id": 0, "type": "line", "p_list": [[466, 155], [635, 370]], "algorithm": "DDA", "color": [0, 0, 0], "zvalue": 1007.0}, "1": {"id": 1, "type": "line", "p_list": [[150, 218], [361, 117]], "algorithm": "DDA", "color": [0, 0, 0], "zvalue": 1.0}, "2": {"id": 2, "type": "line", "p_list": [[180, 329], [311, 435]], "algorithm": "DDA", "color": [0, 0, 0], "zvalue": 2.0}, "3": {"id": 3, "type": "line", "p_list": [[290, 543], [369, 584]], "algorithm": "DDA", "color": [0, 0, 0], "zvalue": 3.0}}
+{
+  "0":
+  {"id": 0, "type": "line", "p_list": [[135, 173], [432, 187]], "algorithm": "DDA", "color": [0, 0, 0], "zvalue": 0.0
+  }
+}

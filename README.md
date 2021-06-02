@@ -1,7 +1,7 @@
-### Pretty Printer
+### Pretty Painter
 
 
-Pretty Printer is a simple but powerful painting software written by Python and pyqt5.
+Pretty Painter is a simple but powerful painting software written by Python and pyqt5.
 
 #### TODO
 ##### basic part:

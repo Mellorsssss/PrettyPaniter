@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
+import copy
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
@@ -8,6 +9,11 @@ import json
 from algorithms import cg_algorithms as alg
 from GraphicsItems.ItemFactoryModule import ItemFactory
 from GraphicsItems.PPItemModule import PPItem
+from utils.command import Command
+from utils.copy_command import CopyCommand
+from utils.paste_command import PasteCommand
+from utils.undo_command import UndoCommand
+from utils.command_history import CommandHistory
 from typing import Optional
 from PyQt5.QtWidgets import (
     QApplication,
@@ -38,14 +44,32 @@ from PIL import Image
 
 class PPCanvas(QGraphicsView):
     """
-    画布窗体类，继承自QGraphicsView，采用QGraphicsView、QGraphicsScene、QGraphicsItem的绘图框架
+    PPCanvas is the main gui of the Pretty Painter
+
+    Attributes:
+        queue_pos: points have drawn
+        item_dict: all the items on the canvas
+        selected_id: selected item's id
+        selected_item: current selected item
+        id_count: number of items
+
+        status: status of the canvas
+        clip_rect: # to remove
+
+        pen_color: color to paint
+
+        item_factory: factory of items
+        clipboard: item to paste
     """
 
     def __init__(self, *args):
         super().__init__(*args)
         self.setFocusPolicy(Qt.StrongFocus)
+
+        '''
+        context of the canvas
+        '''
         self.queue_pos = 0 # TODO: move this to concrete item
-        self.main_window = None
         self.item_dict = {}
         self.selected_id = ''
         self.id_count = 0
@@ -55,7 +79,7 @@ class PPCanvas(QGraphicsView):
         self.temp_algorithm = ''
         self.temp_id = ''
         self.temp_item = None
-        self.selected_item = None
+        self.selected_item = None # current selected item
         self.pen_color = QColor(0, 0, 0)
 
         self.item_factory:ItemFactory = ItemFactory()  # 图元工厂类，用于生成各种类型的图元
@@ -66,6 +90,12 @@ class PPCanvas(QGraphicsView):
 
         self.max_z = 999
 
+    def get_context(self):
+        return copy.copy(self.item_dict)
+
+    def set_context(self, context):
+        self.item_dict = context
+
     def get_id(self):
         ret: int = self.id_count
         self.id_count += 1
@@ -74,14 +104,21 @@ class PPCanvas(QGraphicsView):
     def set_id(self, _id):
         self.id_count = max(self.id_count, _id)
 
-    ###### persistence of the items ######
     def remove_item(self, id):
-        self.clear_selection()
+        self.reset_selection()
         self.scene().removeItem(self.item_dict[id])
         del self.item_dict[id]
         self.updateScene([self.sceneRect()])
 
-    def add_item(self, id, item):
+    def add_item(self, item: PPItem, id: int = None):
+        if self.item_dict.get(int(item.id)) is not None or id is None:
+            print("duplicated id")
+            item.setId(self.get_id())
+        else:
+            item.setId(id)
+        self.add_item_aux(int(item.id), item)
+
+    def add_item_aux(self, id, item):
         self.item_dict[id] = item
         self.scene().addItem(item)
         self.scene().update()
@@ -89,7 +126,7 @@ class PPCanvas(QGraphicsView):
 
     def remove_all(self):
         self.status_changed()
-        self.clear_selection()
+        self.reset_selection()
         for key, item in self.item_dict.items():
             self.scene().removeItem(self.item_dict[key])
         self.item_dict.clear()
@@ -101,6 +138,9 @@ class PPCanvas(QGraphicsView):
         :return:  如果当前选中了图元，返回真
         '''
         return self.selected_id != '' and self.selected_item is not None
+
+    def get_selection(self) -> PPItem:
+        return self.selected_item
 
     def save_all(self, save_path):
         '''
@@ -192,23 +232,24 @@ class PPCanvas(QGraphicsView):
         # 删除当前所有图元，并且清除所有选中
         self.status_changed()
         self.remove_all()
-        self.clear_selection()
+        self.reset_selection()
+        self.id_count = 0
         max_key = -1
         try:
             for key, item in load_dict.items():
-                max_key = max(max_key, int(key))
                 new_item = self.item_factory.get_item(key, item['type'], item['p_list'], item['algorithm'])
                 new_item.setFinish(True)
                 new_item.setZValue(item['zvalue'])
                 new_item.setColor(QColor(item['color'][0], item['color'][1], item['color'][2]))
+                new_item.setId(self.get_id())
                 if new_item.item_type == 'polygon':
                     if item["fill"]:
                         new_item.set_fill(QColor(item['fill_color'][0], item['fill_color'][1], item['fill_color'][2]))
-                self.add_item(key, new_item)
+                # self.add_item_aux(key, new_item)
+                self.add_item(new_item)
         except:
             print("load failure")
             return
-        self.set_id(max_key + 1)
         self.temp_id = self.get_id()
 
     def copy(self):
@@ -229,7 +270,8 @@ class PPCanvas(QGraphicsView):
                             .setColor(self.selected_item.color)
                             .setFinish(True)
                             .setId(self.get_id()))
-            self.add_item(test.id, test)
+            # self.add_item(test.id, test)
+            self.add_item(test, test.id)
 
         self.clipboard = self.selected_item.clone()
         self.clipboard.setId(self.get_id())
@@ -250,7 +292,8 @@ class PPCanvas(QGraphicsView):
         if self.clipboard is None:
             return
         self.clipboard.translate(30, 30)
-        self.add_item(self.clipboard.id, self.clipboard)
+        # self.add_item(self.clipboard.id, self.clipboard)
+        self.add_item(self.clipboard)
 
         # update clipboard
         self.clipboard = self.clipboard.clone()
@@ -296,7 +339,6 @@ class PPCanvas(QGraphicsView):
 
         self.updateScene([self.sceneRect()])
 
-    ###### setter & getter ######
     def setPenColor(self, color: QColor):
         self.pen_color = color
 
@@ -309,16 +351,12 @@ class PPCanvas(QGraphicsView):
     def get_status(self):
         return self.status
 
-    ###### drawing functions ######
-
-    # init the env
     def start_draw(self, status, algorithm, item_id):
         self.setStatus(status)
         self.temp_algorithm = algorithm
         self.temp_id = item_id
         self.queue_pos = -1
 
-    # transitions
     def translate(self, dx, dy):
         if not self.has_select_item():
             return
@@ -392,7 +430,6 @@ class PPCanvas(QGraphicsView):
         self.temp_id = self.get_id()
         self.temp_item = None
 
-    ###### 系统状态机维护 ######
     def status_changed(self):
         '''
         canvas的状态转移
@@ -405,7 +442,7 @@ class PPCanvas(QGraphicsView):
             self.finish_draw_curve()
             self.updateScene([self.sceneRect()])
 
-    def clear_selection(self):
+    def reset_selection(self):
         if self.has_select_item():
             try:
                 self.selected_item.setSelect(False)
@@ -419,7 +456,7 @@ class PPCanvas(QGraphicsView):
             return
         if selected == self.selected_id:
             return
-        self.main_window.statusBar().showMessage('图元选择： %s' % selected)
+
         if self.has_select_item():
             try:
                 self.selected_item.setSelect(False)
@@ -451,7 +488,6 @@ class PPCanvas(QGraphicsView):
         self.status_changed()
         self.status = status
 
-    ###### 鼠标与键盘事件处理 ######
     def __mouse_press_handle(self, event: QMouseEvent):
         if event.button() == Qt.RightButton:
             if self.status == 'polygon' and self.temp_item is not None:
@@ -513,7 +549,7 @@ class PPCanvas(QGraphicsView):
                 else:
                     self.setCursor(Qt.PointingHandCursor)
             else:
-                self.clear_selection()
+                self.reset_selection()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         self.__mouse_press_handle(event)
@@ -633,10 +669,10 @@ class PPCanvas(QGraphicsView):
         if QApplication.keyboardModifiers() == Qt.ControlModifier:
             if event.key() == Qt.Key_D and self.has_select_item():
                 self.remove_item(self.selected_id)
-            elif event.key() == Qt.Key_C:
-                self.copy()
-            elif event.key() == Qt.Key_V:
-                self.paste()
+            # elif event.key() == Qt.Key_C:
+            #     self.copy()
+            # elif event.key() == Qt.Key_V:
+            #     self.paste()
 
         self.updateScene([self.sceneRect()])
         super().keyPressEvent(event)
@@ -1107,22 +1143,17 @@ class ResetCanvasWidget(QWidget):
         self.no_pushbuuton.clicked.connect(self.close)
 
 
-class MainWindow(QMainWindow):
+class PPApplication(QMainWindow):
     """
     主窗口类
     """
 
     def __init__(self):
         super().__init__()
-        self.item_cnt = 0
-        self.init_items()
-        self.init_menu()
-        self.init_layout()
+        self.__clipboard = None
+        self.history: CommandHistory = CommandHistory()
 
-    def init_items(self):
-        self.item_list = []
-
-        # 使用QGraphicsView作为画布
+        # init the PPCanvas
         self.scene = QGraphicsScene(self)
         self.scene.setSceneRect(0, 0, 800, 800)
         self.canvas_widget = PPCanvas(self.scene, self)
@@ -1130,14 +1161,12 @@ class MainWindow(QMainWindow):
         self.canvas_widget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvas_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        self.canvas_widget.main_window = self
-        # 图元操作的对话框
+        # init the window class
         self.translate_window = None
         self.rotate_window = None
         self.scale_window = None
         self.clip_window = None
 
-    def init_menu(self):
         # 设置菜单栏
         menubar = self.menuBar()
         file_menu = menubar.addMenu('文件')
@@ -1246,7 +1275,6 @@ class MainWindow(QMainWindow):
         tool_bar = self.addToolBar('多边形填充')
         tool_bar.addAction(fill_act)
 
-    def init_layout(self):
         # 设置主窗口的布局
         self.hbox_layout = QHBoxLayout()
         self.hbox_layout.addWidget(self.canvas_widget)
@@ -1257,6 +1285,24 @@ class MainWindow(QMainWindow):
         self.resize(600, 600)
         self.setWindowTitle('Pretty Printer')
         self.setWindowIcon(QIcon('../../other_folder/other_folder/cover.png'))
+
+    def set_clipboard(self, item):
+        self.__clipboard = item
+        return self
+
+    def get_clipboard(self) -> PPItem:
+        return self.__clipboard
+
+    def execute_command(self, command: Command):
+        if command.execute():
+            self.history.push_command(command)
+
+    def undo_command(self):
+        command: Command = self.history.pop_command()
+        if command is None:
+            return
+
+        command.undo()
 
     def pen_color_action(self):
         color = QColorDialog.getColor()
@@ -1289,19 +1335,19 @@ class MainWindow(QMainWindow):
         # self.canvas_widget.start_draw_line(algorithm, self.get_id())
         self.canvas_widget.start_draw('line', algorithm, self.canvas_widget.get_id())
         self.statusBar().showMessage(algorithm + '算法绘制线段')
-        self.canvas_widget.clear_selection()
+        self.canvas_widget.reset_selection()
 
     def polygon_action(self, algorithm='DDA'):
         # self.canvas_widget.start_draw_polygon(algorithm, self.get_id())
         self.canvas_widget.start_draw('polygon', algorithm, self.canvas_widget.get_id())
         self.statusBar().showMessage(algorithm + '算法绘制多边形')
-        self.canvas_widget.clear_selection()
+        self.canvas_widget.reset_selection()
 
     def ellipse_action(self):
         # self.canvas_widget.start_draw_ellipse(self.get_id())
         self.canvas_widget.start_draw('ellipse', None, self.canvas_widget.get_id())
         self.statusBar().showMessage('中点画圆分绘制椭圆')
-        self.canvas_widget.clear_selection()
+        self.canvas_widget.reset_selection()
 
     def curve_action(self, algorithm):
         '''
@@ -1312,7 +1358,7 @@ class MainWindow(QMainWindow):
         # self.canvas_widget.start_draw_curve(algorithm, self.get_id())
         self.canvas_widget.start_draw('curve', algorithm, self.canvas_widget.get_id())
         self.statusBar().showMessage(algorithm + '算法绘制曲线')
-        self.canvas_widget.clear_selection()
+        self.canvas_widget.reset_selection()
 
     def translate_action(self):
         '''
@@ -1375,12 +1421,22 @@ class MainWindow(QMainWindow):
                 self.save_canvas_as_json_action()
             elif event.key() == Qt.Key_O:
                 self.load_canvas_from_json_action()
+            elif event.key() == Qt.Key_C:
+                command = CopyCommand(self, self.canvas_widget)
+                self.execute_command(command)
+            elif event.key() == Qt.Key_V:
+                command = PasteCommand(self, self.canvas_widget)
+                self.execute_command(command)
+            elif event.key() == Qt.Key_Z:
+                print("undo")
+                command = UndoCommand(self, self.canvas_widget)
+                self.execute_command(command)
 
-        super(MainWindow, self).keyPressEvent(event)
+        super(PPApplication, self).keyPressEvent(event)
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    mw = MainWindow()
+    mw = PPApplication()
     mw.show()
     sys.exit(app.exec_())
