@@ -13,6 +13,8 @@ from utils.command import Command
 from utils.copy_command import CopyCommand
 from utils.paste_command import PasteCommand
 from utils.undo_command import UndoCommand
+from utils.add_command import AddCommand
+from utils.remove_command import RemoveCommand
 from utils.command_history import CommandHistory
 from typing import Optional
 from PyQt5.QtWidgets import (
@@ -85,10 +87,31 @@ class PPCanvas(QGraphicsView):
         self.item_factory:ItemFactory = ItemFactory()  # 图元工厂类，用于生成各种类型的图元
         self.clipboard: PPItem = None  # 剪切板，记录已经被复制的元素
 
+        self.__clipboard = None
+        self.history: CommandHistory = CommandHistory()
+
         self.verticalScrollBar().setVisible(False)
         self.horizontalScrollBar().setVisible(False)
 
         self.max_z = 999
+
+    def set_clipboard(self, item):
+        self.__clipboard = item
+        return self
+
+    def get_clipboard(self) -> PPItem:
+        return self.__clipboard
+
+    def execute_command(self, command: Command):
+        if command.execute():
+            self.history.push_command(command)
+
+    def undo_command(self):
+        command: Command = self.history.pop_command()
+        if command is None:
+            return
+
+        command.undo()
 
     def get_context(self):
         return copy.copy(self.item_dict)
@@ -112,6 +135,18 @@ class PPCanvas(QGraphicsView):
         del self.item_dict[id]
         self.updateScene([self.sceneRect()])
 
+    def remove_selection(self):
+        self.remove_item(self.selected_id)
+
+    def add_temp_item(self):
+        if self.temp_item is None:
+            return
+        self.scene().removeItem(self.temp_item)
+        self.selected_item = self.temp_item
+        command = AddCommand(self, self).set_id(self.temp_id)
+        self.execute_command(command)
+        self.selected_item = None
+
     def add_item(self, item: PPItem, id: int = None):
         if self.item_dict.get(int(item.id)) is not None or id is None:
             item.setId(self.get_id())
@@ -121,8 +156,10 @@ class PPCanvas(QGraphicsView):
 
     def add_item_aux(self, id, item):
         self.item_dict[id] = item
+        item.setFinish(True)
         self.scene().addItem(item)
         self.scene().update()
+        self.update()
         self.updateScene([self.sceneRect()])
 
     def update_all(self):
@@ -413,14 +450,12 @@ class PPCanvas(QGraphicsView):
 
     def finish_draw_polygon(self):
         if self.status != 'polygon' or self.temp_item is None:
-            # raise Exception("item is not polygon or is None!")
             return
         else:
             if len(self.temp_item.p_list) < 3: # 不是一个多边形
                 self.scene().removeItem(self.temp_item)
             else:
-                self.temp_item.setFinish(True)
-                self.item_dict[self.temp_id] = self.temp_item
+                self.add_temp_item()
             self.update()
             self.queue_pos = -1
             self.finish_draw()
@@ -432,8 +467,7 @@ class PPCanvas(QGraphicsView):
             if self.temp_item.algorithm == 'B-spline' and len(self.temp_item.p_list) <4:
                 self.scene().removeItem(self.temp_item)
             else:
-                self.temp_item.setFinish(True)
-                self.item_dict[self.temp_id] = self.temp_item
+                self.add_temp_item()
             self.update()
             self.queue_pos = -1
             self.finish_draw()
@@ -616,9 +650,7 @@ class PPCanvas(QGraphicsView):
         if self.status != 'mouse' and self.temp_item is None:
             return
         if self.status == 'line':
-            self.item_dict[self.temp_id] = self.temp_item
-            self.temp_item.setFinish(True)
-            self.update()
+            self.add_temp_item()
             self.finish_draw()
 
         elif self.status == 'polygon':
@@ -628,22 +660,14 @@ class PPCanvas(QGraphicsView):
             if self.queue_pos > 1 and get_distance(self.temp_item.p_list[0],
                                                    self.temp_item.p_list[self.queue_pos]) < 15:
                 # self.temp_item.p_list[self.queue_pos] = self.temp_item.p_list[0]
-                self.temp_item.p_list.pop(-1)
-                self.temp_item.setFinish(True)
+                self.add_temp_item()
                 self.temp_item.update()
                 self.finish_draw_polygon()
-            # else:
-            #     self.temp_item.p_list += [self.temp_item.p_list[self.queue_pos]]
-            #     self.queue_pos += 1
 
         elif self.status == 'ellipse':
-            self.item_dict[self.temp_id] = self.temp_item
-            self.temp_item.setFinish(True)
-            self.update()
+            self.add_temp_item()
             self.finish_draw()
 
-        # elif self.status == 'curve':
-        #     pass
 
         if self.status == 'mouse':
             if self.selected_item is not None:
@@ -683,17 +707,22 @@ class PPCanvas(QGraphicsView):
         # ctrl 组合键处理
         if QApplication.keyboardModifiers() == Qt.ControlModifier:
             if event.key() == Qt.Key_D and self.has_select_item():
-                self.remove_item(self.selected_id)
-            # elif event.key() == Qt.Key_C:
-            #     self.copy()
-            # elif event.key() == Qt.Key_V:
-            #     self.paste()
+                command = RemoveCommand(self, self)
+                self.execute_command(command)
+            elif event.key() == Qt.Key_C:
+                command = CopyCommand(self, self)
+                self.execute_command(command)
+            elif event.key() == Qt.Key_V:
+                command = PasteCommand(self, self)
+                self.execute_command(command)
+            elif event.key() == Qt.Key_Z:
+                print("undo")
+                command = UndoCommand(self, self)
+                self.execute_command(command)
 
         self.updateScene([self.sceneRect()])
         super().keyPressEvent(event)
 
-    def wheelEvent(self, event: QWheelEvent) -> None:
-        return
 
 
 class ClipRectangle(QGraphicsItem):
@@ -1165,8 +1194,6 @@ class PPApplication(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.__clipboard = None
-        self.history: CommandHistory = CommandHistory()
 
         # init the PPCanvas
         self.scene = QGraphicsScene(self)
@@ -1301,24 +1328,6 @@ class PPApplication(QMainWindow):
         self.setWindowTitle('Pretty Printer')
         self.setWindowIcon(QIcon('../../other_folder/other_folder/cover.png'))
 
-    def set_clipboard(self, item):
-        self.__clipboard = item
-        return self
-
-    def get_clipboard(self) -> PPItem:
-        return self.__clipboard
-
-    def execute_command(self, command: Command):
-        if command.execute():
-            self.history.push_command(command)
-
-    def undo_command(self):
-        command: Command = self.history.pop_command()
-        if command is None:
-            return
-
-        command.undo()
-
     def pen_color_action(self):
         color = QColorDialog.getColor()
         self.canvas_widget.setPenColor(color)
@@ -1436,16 +1445,6 @@ class PPApplication(QMainWindow):
                 self.save_canvas_as_json_action()
             elif event.key() == Qt.Key_O:
                 self.load_canvas_from_json_action()
-            elif event.key() == Qt.Key_C:
-                command = CopyCommand(self, self.canvas_widget)
-                self.execute_command(command)
-            elif event.key() == Qt.Key_V:
-                command = PasteCommand(self, self.canvas_widget)
-                self.execute_command(command)
-            elif event.key() == Qt.Key_Z:
-                print("undo")
-                command = UndoCommand(self, self.canvas_widget)
-                self.execute_command(command)
 
         super(PPApplication, self).keyPressEvent(event)
 
