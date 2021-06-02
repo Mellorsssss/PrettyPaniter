@@ -30,9 +30,10 @@ class CompositeItem(PPItem):
         cur_rect = QRectF(self.itemList[0].boundingRect())
 
         for item in self.itemList:
+
             com_rect = QRectF(item.boundingRect())
             p1_x = min(cur_rect.x(), com_rect.x())
-            p1_y = min(cur_rect.x(), com_rect.y())
+            p1_y = min(cur_rect.y(), com_rect.y())
             p2_x = max(cur_rect.x() + cur_rect.width(), com_rect.x() + com_rect.width())
             p2_y = max(cur_rect.y() + cur_rect.height(), com_rect.y() + com_rect.height())
 

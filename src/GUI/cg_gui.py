@@ -310,12 +310,15 @@ class MyCanvas(QGraphicsView):
         return self.status
 
     ###### drawing functions ######
+
+    # init the env
     def start_draw(self, status, algorithm, item_id):
         self.setStatus(status)
         self.temp_algorithm = algorithm
         self.temp_id = item_id
         self.queue_pos = -1
 
+    # transitions
     def translate(self, dx, dy):
         if not self.has_select_item():
             return
