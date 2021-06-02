@@ -94,7 +94,9 @@ class PPCanvas(QGraphicsView):
         return copy.copy(self.item_dict)
 
     def set_context(self, context):
+        self.remove_all()
         self.item_dict = context
+        self.update_all()
 
     def get_id(self):
         ret: int = self.id_count
@@ -112,7 +114,6 @@ class PPCanvas(QGraphicsView):
 
     def add_item(self, item: PPItem, id: int = None):
         if self.item_dict.get(int(item.id)) is not None or id is None:
-            print("duplicated id")
             item.setId(self.get_id())
         else:
             item.setId(id)
@@ -124,11 +125,22 @@ class PPCanvas(QGraphicsView):
         self.scene().update()
         self.updateScene([self.sceneRect()])
 
+    def update_all(self):
+        self.status_changed()
+        for key, item in self.item_dict.items():
+            self.scene().addItem(self.item_dict[key])
+        self.updateScene([self.sceneRect()])
+        self.scene().update()
+        self.updateScene([self.sceneRect()])
+
     def remove_all(self):
         self.status_changed()
         self.reset_selection()
+        cnt = 0
         for key, item in self.item_dict.items():
-            self.scene().removeItem(self.item_dict[key])
+            self.scene().removeItem(item)
+            cnt += 1
+        print("remove " + str(cnt) + " items.")
         self.item_dict.clear()
         self.updateScene([self.sceneRect()])
 
@@ -449,7 +461,10 @@ class PPCanvas(QGraphicsView):
                 self.selected_id = ''
                 self.selected_item = None
             except KeyError:
-                print("KeyError: {0} is not in the item dict.".format(self.selected_id))
+                print("reset: KeyError: {0} is not in the item dict.".format(self.selected_id))
+        else:
+            self.selected_id = ''
+            self.selected_item = None
 
     def selection_changed(self, selected):
         if selected == '':

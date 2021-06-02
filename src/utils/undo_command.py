@@ -8,5 +8,6 @@ class UndoCommand(Command):
     def __init__(self, _app, _canvas):
         super(UndoCommand, self).__init__(_app, _canvas)
 
-    def undo(self):
-        pass
+    def execute(self) ->bool:
+        self.app.undo_command()
+        return False
