@@ -2,7 +2,7 @@ from typing import Optional
 from PyQt5.QtCore import QRectF
 from PyQt5.QtGui import QPainter
 from PyQt5.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
-from GraphicsItems.PPItemModule import PPItem
+from GraphicsItems.pp_item import PPItem
 from algorithms import cg_algorithms as alg
 
 

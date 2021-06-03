@@ -7,8 +7,8 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import math
 import json
 from algorithms import cg_algorithms as alg
-from GraphicsItems.ItemFactoryModule import ItemFactory
-from GraphicsItems.PPItemModule import PPItem
+from GraphicsItems.item_factory import ItemFactory
+from GraphicsItems.pp_item import PPItem
 from utils.command import Command
 from utils.copy_command import CopyCommand
 from utils.paste_command import PasteCommand
@@ -85,7 +85,7 @@ class PPCanvas(QGraphicsView):
         self.pen_color = QColor(0, 0, 0)
 
         self.item_factory:ItemFactory = ItemFactory()  # 图元工厂类，用于生成各种类型的图元
-        self.clipboard: PPItem = None  # 剪切板，记录已经被复制的元素
+        self.clipboard = None  # 剪切板，记录已经被复制的元素
 
         self.__clipboard = None
         self.history: CommandHistory = CommandHistory()
@@ -99,7 +99,7 @@ class PPCanvas(QGraphicsView):
         self.__clipboard = item
         return self
 
-    def get_clipboard(self) -> PPItem:
+    def get_clipboard(self) :
         return self.__clipboard
 
     def execute_command(self, command: Command):
@@ -151,7 +151,7 @@ class PPCanvas(QGraphicsView):
         self.execute_command(command)
         self.selected_item = None
 
-    def add_item(self, item: PPItem, id: int = None):
+    def add_item(self, item, id: int = None):
         if self.item_dict.get(int(item.id)) is not None or id is None:
             item.setId(self.get_id())
         else:
@@ -165,6 +165,14 @@ class PPCanvas(QGraphicsView):
         self.scene().update()
         self.update()
         self.updateScene([self.sceneRect()])
+
+    def add_text_item(self):
+        item = self.item_factory.get_item(self.get_id(), 'text', None)
+        self.item_dict[item.id] = item
+        self.selected_item = item
+        command = AddCommand(self, self).set_id(item.id)
+        self.execute_command(command)
+        self.selected_item = None
 
     def update_all(self):
         self.status_changed()
@@ -192,7 +200,8 @@ class PPCanvas(QGraphicsView):
         '''
         return self.selected_id != '' and self.selected_item is not None
 
-    def get_selection(self) -> PPItem:
+    def get_selection(self) :
+        ret = self.selected_item
         return self.selected_item
 
     def save_all(self, save_path):
@@ -1222,6 +1231,7 @@ class PPApplication(QMainWindow):
         load_canvas_act = file_menu.addAction('从json加载画布')
         exit_act = file_menu.addAction('退出')
         draw_menu = menubar.addMenu('绘制')
+        add_text_act = draw_menu.addAction('Text')
         line_menu = draw_menu.addMenu('线段')
         line_naive_act = line_menu.addAction('Naive')
         line_naive_act.setIcon(QIcon('../../other_folder/other_folder/line.ico'))
@@ -1262,6 +1272,7 @@ class PPApplication(QMainWindow):
 
         exit_act.triggered.connect(qApp.quit)
 
+        add_text_act.triggered.connect(lambda: self.add_text_action())
         line_naive_act.triggered.connect(lambda: self.line_action('Naive'))
         line_bresenham_act.triggered.connect(lambda: self.line_action('Bresenham'))
         line_dda_act.triggered.connect(lambda: self.line_action('DDA'))
@@ -1289,6 +1300,9 @@ class PPApplication(QMainWindow):
         tool_bar = self.addToolBar('颜色')
         tool_bar.addAction(set_pen_act)
         set_pen_act.setIcon(QIcon('../../other_folder/other_folder/pen.ico'))
+
+        tool_bar = self.addToolBar('文字')
+        tool_bar.addAction(add_text_act)
 
         tool_bar = self.addToolBar('线段')
         tool_bar.addAction(line_dda_act)
@@ -1357,6 +1371,9 @@ class PPApplication(QMainWindow):
 
         if save_path != '':
             self.canvas_widget.save_all_as_bmp(save_path + '.bmp')
+
+    def add_text_action(self):
+        self.canvas_widget.add_text_item()
 
     def line_action(self, algorithm='Naive'):
         # self.canvas_widget.start_draw_line(algorithm, self.get_id())

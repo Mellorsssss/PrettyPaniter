@@ -1,5 +1,5 @@
 from typing import Optional
-from PyQt5.QtCore import QRectF,Qt
+from PyQt5.QtCore import QRectF, Qt
 from PyQt5.QtGui import QColor, QPen, QPainter
 from PyQt5.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from algorithms import cg_algorithms as alg
