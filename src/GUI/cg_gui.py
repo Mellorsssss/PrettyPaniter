@@ -114,11 +114,7 @@ class PPCanvas(QGraphicsView):
         command.undo()
 
     def get_context(self):
-        cloned_dict = {}
-        for key, item in self.item_dict.items():
-            cloned_dict[key] = item.clone()
-        return cloned_dict
-        # return copy.copy(self.item_dict) # quick way
+        return copy.copy(self.item_dict) # quick way
 
     def set_context(self, context):
         self.remove_all()
@@ -153,6 +149,7 @@ class PPCanvas(QGraphicsView):
 
     def add_item(self, item, id: int = None):
         if self.item_dict.get(int(item.id)) is not None or id is None:
+            print("duplicated id")
             item.setId(self.get_id())
         else:
             item.setId(id)
@@ -167,8 +164,8 @@ class PPCanvas(QGraphicsView):
         self.updateScene([self.sceneRect()])
 
     def add_text_item(self):
+        self.setStatus('mouse')
         item = self.item_factory.get_item(self.get_id(), 'text', None)
-        self.item_dict[item.id] = item
         self.selected_item = item
         command = AddCommand(self, self).set_id(item.id)
         self.execute_command(command)
@@ -200,7 +197,7 @@ class PPCanvas(QGraphicsView):
         '''
         return self.selected_id != '' and self.selected_item is not None
 
-    def get_selection(self) :
+    def get_selection(self):
         ret = self.selected_item
         return self.selected_item
 

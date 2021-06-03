@@ -14,7 +14,7 @@ class AddCommand(Command):
         self.id = _id
         return self
 
-    def execute(self) ->bool:
+    def execute(self) -> bool:
         self.backup = self.canvas.get_context()
         self.canvas.add_item(self.canvas.get_selection(), self.id)
         return True

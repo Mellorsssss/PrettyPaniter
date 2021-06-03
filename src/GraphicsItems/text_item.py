@@ -67,10 +67,15 @@ class TextItem(QGraphicsTextItem):
         pass
 
     def set_control_point(self, x, y):
-        pass
+        self.position = [x, y]
 
     def update_control_point(self, x, y):
-        pass
+        if self.position is None:
+            return
+        self.setX(self.position[0]-10)
+        self.setY(self.position[1]-10)
+
+        self.position = [x, y]
 
     def release_control_point(self):
         pass
