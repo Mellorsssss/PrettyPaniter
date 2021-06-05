@@ -2,7 +2,7 @@ from GraphicsItems.line_item import LineItem
 from GraphicsItems.polygon_item import PolygonItem
 from GraphicsItems.ellipse_item import EllipseItem
 from GraphicsItems.curve_item import CurveItem
-from GraphicsItems.composite_item import CompositeItem
+from GraphicsItems.compound_item import CompoundItem
 from GraphicsItems.text_item import TextItem
 
 
@@ -24,7 +24,7 @@ class ItemFactory:
         elif item_type == 'curve':
             return CurveItem(item_id, item_type, p_list, algorithm)
         elif item_type == 'composite':
-            return CompositeItem(item_id, item_type, p_list, algorithm)
+            return CompoundItem(item_id, item_type, p_list, algorithm)
         elif item_type == 'text':
             return TextItem(item_id)
 

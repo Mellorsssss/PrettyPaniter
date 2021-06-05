@@ -3,22 +3,22 @@ from PyQt5.QtCore import QRectF
 from PyQt5.QtGui import QPainter
 from PyQt5.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from GraphicsItems.pp_item import PPItem
-from algorithms import cg_algorithms as alg
+from algorithms import my_algorithms as alg
 
 
-class CompositeItem(PPItem):
+class CompoundItem(PPItem):
     def __init__(self, item_id: str, item_type: str, p_list: list, algorithm: str = '', parent: QGraphicsItem = None):
-        super(CompositeItem, self).__init__(item_id, 'composite', None, None, parent)
+        super(CompoundItem, self).__init__(item_id, 'composite', None, None, parent)
         self.itemList = []
 
     def appendItem(self, item):
-        assert issubclass(type(item), PPItem)  # item should be a PPItem
         self.itemList.append(item)
+        item.unableSelect()
         return self  # for chain call
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget] = ...) -> None:
         for item in self.itemList:
-            item.paint(painter, option)
+            item.paint(painter, option, widget)
 
         if self.selected:
             self.drawBoundingBox(painter)
@@ -26,7 +26,7 @@ class CompositeItem(PPItem):
     def boundingRect(self) -> QRectF:
         # iterate all the boundingRect of the items
         # get the boundingRect of all the rect
-        assert len(self.itemList)>=1
+        assert len(self.itemList) >= 1
         cur_rect = QRectF(self.itemList[0].boundingRect())
 
         for item in self.itemList:
@@ -42,7 +42,7 @@ class CompositeItem(PPItem):
         return cur_rect
 
     def clone(self):
-        cloned_object = CompositeItem(self.id, 'composite', None, None)
+        cloned_object = CompoundItem(self.id, 'composite', None, None)
         cloned_object.itemList = [item.clone() for item in self.itemList]  # deep copy every item in itemlist
         return cloned_object
 
@@ -50,7 +50,7 @@ class CompositeItem(PPItem):
         pass
 
     def set_control_point(self, x, y):
-        self.position = [x,y]
+        self.position = [x, y]
 
     def update_control_point(self, x, y):
         if self.position is None:

@@ -1,6 +1,6 @@
 from typing import Optional
 from GraphicsItems.pp_item import PPItem
-from algorithms import cg_algorithms as alg
+from algorithms import my_algorithms as alg
 from PyQt5.QtCore import QRectF,Qt
 from PyQt5.QtGui import QPainter, QPen, QColor
 from PyQt5.QtWidgets import QGraphicsItem, QWidget, QStyleOptionGraphicsItem

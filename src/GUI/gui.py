@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import math
 import json
-from algorithms import cg_algorithms as alg
+from algorithms import my_algorithms as alg
 from GraphicsItems.item_factory import ItemFactory
 from GraphicsItems.pp_item import PPItem
 from utils.command import Command
@@ -95,6 +95,9 @@ class PPCanvas(QGraphicsView):
 
         self.max_z = 999
 
+        # for mix items
+        self.compound_items = set()
+
     def set_clipboard(self, item):
         self.__clipboard = item
         return self
@@ -135,9 +138,6 @@ class PPCanvas(QGraphicsView):
         del self.item_dict[id]
         self.updateScene([self.sceneRect()])
 
-    def remove_selection(self):
-        self.remove_item(self.selected_id)
-
     def add_temp_item(self):
         if self.temp_item is None:
             return
@@ -163,10 +163,38 @@ class PPCanvas(QGraphicsView):
         self.update()
         self.updateScene([self.sceneRect()])
 
-    def add_text_item(self):
+    def add_text_item(self, _text:str = "this is demo"):
         self.setStatus('mouse')
         item = self.item_factory.get_item(self.get_id(), 'text', None)
+        item.set_text(_text)
         self.selected_item = item
+
+        command = AddCommand(self, self).set_id(item.id)
+        self.execute_command(command)
+        self.selected_item = None
+
+    def reset_compound_items(self):
+        self.reset_selection()
+
+        for item in self.compound_items:
+            item.setSelect(False)
+
+        self.compound_items = set()
+
+    def add_compound_items(self, item):
+        self.compound_items.add(item)
+
+    def add_compound_item(self):
+        self.setStatus('mouse')
+        if len(self.compound_items) == 0:
+            return
+        item = self.item_factory.get_item(self.get_id(), 'composite', None)
+        for tem in self.compound_items:
+            item.appendItem(tem)
+
+        self.selected_item = item
+        self.selected_item.setZValue(self.max_z + 1)  # 将当前的图元放在最顶层
+        self.max_z += 1
         command = AddCommand(self, self).set_id(item.id)
         self.execute_command(command)
         self.selected_item = None
@@ -311,53 +339,6 @@ class PPCanvas(QGraphicsView):
             return
         self.temp_id = self.get_id()
 
-    def copy(self):
-        if self.selected_item is None:
-            return
-
-        if self.selected_item.item_type == 'curve' and len(self.selected_item.p_list) > 10:
-            print("控制点数大于10的曲线不进行复制")
-            msg_box = QMessageBox(QMessageBox.Warning, '复制错误', '为了软件的稳定运行，暂不支持复制超过10个控制点的曲线')
-            msg_box.exec_()
-            return
-
-        # TODO: test code of the Composite item
-        if self.clipboard is not None:
-            test = ItemFactory().get_item(99999, 'composite', None, None)
-            test.appendItem(self.clipboard)
-            test.appendItem(self.selected_item.clone()
-                            .setColor(self.selected_item.color)
-                            .setFinish(True)
-                            .setId(self.get_id()))
-            # self.add_item(test.id, test)
-            self.add_item(test, test.id)
-
-        self.clipboard = self.selected_item.clone()
-        self.clipboard.setId(self.get_id())
-
-    def paste(self, dx=10, dy=10):
-        '''
-        粘贴当前剪切板图元到scene中
-        :param dx: 偏移原先图元的x偏移量
-        :param dy: 偏移原先图元的y偏移量
-        '''
-
-        # 防止过多的粘贴导致程序崩溃
-        if len(self.items()) >= 30:
-            msg_box = QMessageBox(QMessageBox.Warning, '复制错误', '图元超过30个，暂不支持继续粘贴')
-            msg_box.exec_()
-            return
-
-        if self.clipboard is None:
-            return
-        self.clipboard.translate(30, 30)
-        # self.add_item(self.clipboard.id, self.clipboard)
-        self.add_item(self.clipboard)
-
-        # update clipboard
-        self.clipboard = self.clipboard.clone()
-        self.clipboard.setId(self.get_id())
-
     def add_clip_rect(self, x_min, y_min, x_max, y_max):
         if x_min > x_max:
             x_min, x_max = x_max, x_min
@@ -486,6 +467,9 @@ class PPCanvas(QGraphicsView):
         self.temp_id = self.get_id()
         self.temp_item = None
 
+    def remove_selection(self):
+        self.remove_item(self.selected_id)
+
     def status_changed(self):
         '''
         canvas的状态转移
@@ -609,6 +593,16 @@ class PPCanvas(QGraphicsView):
                     self.setCursor(Qt.PointingHandCursor)
             else:
                 self.reset_selection()
+        elif self.status == 'compound':
+            print("compound mode")
+            selected_item = self.itemAt(x, y)
+            if selected_item is not None:
+                selected_item.setSelect(True)
+                self.add_compound_items(selected_item)
+                self.scene().update()
+                self.updateScene([self.sceneRect()])
+            else:
+                self.reset_selection()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         self.__mouse_press_handle(event)
@@ -692,6 +686,10 @@ class PPCanvas(QGraphicsView):
             elif self.status == 'curve' and self.temp_item is not None:
                 self.finish_draw_curve()
 
+        if event.key() == Qt.Key_Alt:
+            self.reset_selection()
+            self.setStatus('compound')  # TODO: may be exclude all other events?
+            print("begin compound")
         # 使用键盘变换当前选中的图元
         if self.has_select_item():
             if event.key() == Qt.Key_W:
@@ -732,6 +730,14 @@ class PPCanvas(QGraphicsView):
 
         self.updateScene([self.sceneRect()])
         super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event: QKeyEvent) -> None:
+        if event.key() == Qt.Key_Alt:
+            assert self.status == "compound"
+            print("set compound")
+            self.setStatus('mouse')
+            self.add_compound_item()
+            self.reset_compound_items()
 
 
 class ClipRectangle(QGraphicsItem):
@@ -1196,6 +1202,56 @@ class ResetCanvasWidget(QWidget):
         self.no_pushbuuton.clicked.connect(self.close)
 
 
+class AddTextWidget(QWidget):
+    def __init__(self, canvas=None):
+        super().__init__()
+        self.canvas = canvas
+
+        # self.setGeometry(200, 300, 500, 500)
+        self.setWindowTitle('添加文字')
+        self.setWindowFlags(Qt.WindowCloseButtonHint | Qt.WindowStaysOnTopHint)
+        self.setWindowModality(Qt.ApplicationModal)
+        self.input_label = QLabel('请输入文字', self)
+
+        self.input_line_edit = QLineEdit('I love NJU.', self)
+
+        self.yes_pushbuuton = QPushButton('确定', self)
+        self.no_pushbuuton = QPushButton('关闭', self)
+
+        self.label_v_layout = QVBoxLayout()
+        self.line_v_layout = QVBoxLayout()
+        self.label_line_h_layout = QHBoxLayout()
+        self.button_h_layout = QHBoxLayout()
+        self.ui_v_layout = QVBoxLayout()
+
+        self.label_v_layout.addWidget(self.input_label)
+        self.line_v_layout.addWidget(self.input_line_edit)
+        self.label_line_h_layout.addLayout(self.label_v_layout)
+        self.label_line_h_layout.addLayout(self.line_v_layout)
+        self.button_h_layout.addWidget(self.yes_pushbuuton)
+        self.button_h_layout.addWidget(self.no_pushbuuton)
+        self.ui_v_layout.addLayout(self.label_line_h_layout)
+        self.ui_v_layout.addLayout(self.button_h_layout)
+        self.setLayout(self.ui_v_layout)
+
+        def finish_input():
+            try:
+                text = self.input_line_edit.text()
+            except ValueError:
+                print("Null is not valid input!")
+                info = QMessageBox(self)
+                info.setText("Null is not valid input!")
+                info.setWindowTitle("警告！")
+                info.exec_()
+            else:
+                print(text)
+                self.canvas.add_text_item(text)
+                self.close()
+
+        self.yes_pushbuuton.clicked.connect(finish_input)
+        self.no_pushbuuton.clicked.connect(self.close)
+
+
 class PPApplication(QMainWindow):
     """
     主窗口类
@@ -1217,6 +1273,7 @@ class PPApplication(QMainWindow):
         self.rotate_window = None
         self.scale_window = None
         self.clip_window = None
+        self.text_window = None
 
         # 设置菜单栏
         menubar = self.menuBar()
@@ -1370,8 +1427,8 @@ class PPApplication(QMainWindow):
             self.canvas_widget.save_all_as_bmp(save_path + '.bmp')
 
     def add_text_action(self):
-        self.canvas_widget.add_text_item()
-
+        self.text_window = AddTextWidget(self.canvas_widget)
+        self.text_window.show()
     def line_action(self, algorithm='Naive'):
         # self.canvas_widget.start_draw_line(algorithm, self.get_id())
         self.canvas_widget.start_draw('line', algorithm, self.canvas_widget.get_id())

@@ -7,7 +7,7 @@ from GraphicsItems.pp_item import PPItem
 
 
 class TextItem(QGraphicsTextItem):
-    def __init__(self, _id):
+    def __init__(self, _id, _text:str = "this is demo"):
         super(TextItem, self).__init__()
         self.id = _id
         self.item_type = 'text'
@@ -20,22 +20,25 @@ class TextItem(QGraphicsTextItem):
 
         self.moving_control_point = -1  # 当前正在移动的控制点索引
         self.position = None
-        self.setFont(QFont("华文琥珀", 20))
-        self.setPlainText("this is a simple demo")
+        self.setFont(QFont("Consolas", 20))
+        self.setPlainText(_text)
+
+    def set_text(self, _text):
+        self.setPlainText(_text)
 
     def setFinish(self, flag):
         self.is_finish = flag
         return self
 
     def setSelect(self, flag: bool):
-        '''
-        设置selected位并同时设置当前的图元是否可以移动
-
-        :param flag: 为True如果当前被选中
-        :return: None
-        '''
         self.selected = flag
         return self
+
+    def unableSelect(self):
+        self.setFlag(QGraphicsItem.ItemIsSelectable, False)
+
+    def reverseSelect(self):
+        self.selected = not self.selected
 
     def setColor(self, color: QColor):
         self.color = color
@@ -60,9 +63,6 @@ class TextItem(QGraphicsTextItem):
         painter.setPen(pen)
         painter.drawRect(self.boundingRect())
 
-
-    # traverse all the control points and find the one which is near to (x, y)
-    # max_dis is the min distance between the control points and (x,y)
     def __find_nearest_control_point(self, x, y, max_dis=30):
         pass
 
@@ -72,8 +72,7 @@ class TextItem(QGraphicsTextItem):
     def update_control_point(self, x, y):
         if self.position is None:
             return
-        self.setX(self.position[0]-10)
-        self.setY(self.position[1]-10)
+        self.translate(x-self.position[0], y-self.position[1])
 
         self.position = [x, y]
 
@@ -94,7 +93,8 @@ class TextItem(QGraphicsTextItem):
 
     # translation on item
     def translate(self, dx, dy):
-        pass
+        self.setX(self.x() + dx)
+        self.setY(self.y() + dy)
 
     def rotate(self, xc, yc, r):
         pass
