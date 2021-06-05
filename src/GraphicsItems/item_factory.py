@@ -4,6 +4,9 @@ from GraphicsItems.ellipse_item import EllipseItem
 from GraphicsItems.curve_item import CurveItem
 from GraphicsItems.compound_item import CompoundItem
 from GraphicsItems.text_item import TextItem
+from GraphicsItems.triangle_item import TriangleItem
+from GraphicsItems.square_item import SquareItem
+from GraphicsItems.circle_item import CircleItem
 
 
 class ItemFactory:
@@ -27,5 +30,10 @@ class ItemFactory:
             return CompoundItem(item_id, item_type, p_list, algorithm)
         elif item_type == 'text':
             return TextItem(item_id)
-
+        elif item_type == 'square':
+            return SquareItem(item_id, item_type, p_list, algorithm)
+        elif item_type == 'triangle':
+            return TriangleItem(item_id, item_type, p_list, algorithm)
+        elif item_type == 'circle':
+            return CircleItem(item_id, item_type, p_list, algorithm)
 

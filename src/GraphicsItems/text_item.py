@@ -89,7 +89,10 @@ class TextItem(QGraphicsTextItem):
         return params_dict
 
     def clone(self):
-        return TextItem(self.id)
+        cloned_obj = TextItem(self.id)
+        cloned_obj.setX(self.x())
+        cloned_obj.setY(self.y())
+        return cloned_obj
 
     # translation on item
     def translate(self, dx, dy):

@@ -582,6 +582,13 @@ class PPCanvas(QGraphicsView):
                     raise Exception("the temp item shouldn't be None!")
                 self.queue_pos += 1
                 self.temp_item.p_list.append([x, y])
+        elif self.status == 'triangle' or self.status == 'square' or self.status == 'circle':
+            p_list = [[x, y]]
+            self.temp_item = self.item_factory.get_item(self.temp_id, self.status, p_list, self.temp_algorithm)
+            self.temp_item.setColor(self.pen_color)
+            self.scene().addItem(self.temp_item)
+            self.add_temp_item()
+            self.finish_draw()
         self.updateScene([self.sceneRect()])
         if self.status == 'mouse':
             selected_item = self.itemAt(x, y)
@@ -1295,6 +1302,9 @@ class PPApplication(QMainWindow):
         line_bresenham_act.setIcon(QIcon('../../other_folder/other_folder/line.ico'))
         polygon_menu = draw_menu.addMenu('多边形')
         polygon_dda_act = polygon_menu.addAction('DDA')
+        triangle_act = draw_menu.addAction('三角形')
+        square_act = draw_menu.addAction('方形')
+        circle_act = draw_menu.addAction('圆形')
         polygon_bresenham_act = polygon_menu.addAction('Bresenham')
         ellipse_act = draw_menu.addAction('椭圆')
         curve_menu = draw_menu.addMenu('曲线')
@@ -1338,6 +1348,9 @@ class PPApplication(QMainWindow):
         ellipse_act.setIcon(QIcon('../../other_folder/other_folder/ellipse.ico'))
         curve_bezier_act.triggered.connect(lambda: self.curve_action('Bezier'))
         curve_b_spline_act.triggered.connect(lambda: self.curve_action('B-spline'))
+        triangle_act.triggered.connect(lambda: self.triangle_action())
+        square_act.triggered.connect(lambda: self.square_action())
+        circle_act.triggered.connect(lambda: self.circle_action())
 
         translate_act.triggered.connect(lambda: self.translate_action())
         rotate_act.triggered.connect(lambda: self.rotate_action())
@@ -1360,6 +1373,15 @@ class PPApplication(QMainWindow):
 
         tool_bar = self.addToolBar('线段')
         tool_bar.addAction(line_dda_act)
+
+        tool_bar = self.addToolBar('三角形')
+        tool_bar.addAction(triangle_act)
+
+        tool_bar = self.addToolBar('方形')
+        tool_bar.addAction(square_act)
+
+        tool_bar = self.addToolBar('圆形')
+        tool_bar.addAction(circle_act)
 
         tool_bar = self.addToolBar('多边形')
         tool_bar.addAction(polygon_bresenham_act)
@@ -1429,6 +1451,7 @@ class PPApplication(QMainWindow):
     def add_text_action(self):
         self.text_window = AddTextWidget(self.canvas_widget)
         self.text_window.show()
+
     def line_action(self, algorithm='Naive'):
         # self.canvas_widget.start_draw_line(algorithm, self.get_id())
         self.canvas_widget.start_draw('line', algorithm, self.canvas_widget.get_id())
@@ -1456,6 +1479,18 @@ class PPApplication(QMainWindow):
         # self.canvas_widget.start_draw_curve(algorithm, self.get_id())
         self.canvas_widget.start_draw('curve', algorithm, self.canvas_widget.get_id())
         self.statusBar().showMessage(algorithm + '算法绘制曲线')
+        self.canvas_widget.reset_selection()
+
+    def triangle_action(self):
+        self.canvas_widget.start_draw('triangle', 'DDA', self.canvas_widget.get_id())
+        self.canvas_widget.reset_selection()
+
+    def square_action(self):
+        self.canvas_widget.start_draw('square', 'DDA', self.canvas_widget.get_id())
+        self.canvas_widget.reset_selection()
+
+    def circle_action(self):
+        self.canvas_widget.start_draw('circle', 'none', self.canvas_widget.get_id())
         self.canvas_widget.reset_selection()
 
     def translate_action(self):
