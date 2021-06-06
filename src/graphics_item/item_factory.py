@@ -1,12 +1,12 @@
-from GraphicsItems.line_item import LineItem
-from GraphicsItems.polygon_item import PolygonItem
-from GraphicsItems.ellipse_item import EllipseItem
-from GraphicsItems.curve_item import CurveItem
-from GraphicsItems.compound_item import CompoundItem
-from GraphicsItems.text_item import TextItem
-from GraphicsItems.triangle_item import TriangleItem
-from GraphicsItems.square_item import SquareItem
-from GraphicsItems.circle_item import CircleItem
+from graphics_item.line_item import LineItem
+from graphics_item.polygon_item import PolygonItem
+from graphics_item.ellipse_item import EllipseItem
+from graphics_item.curve_item import CurveItem
+from graphics_item.compound_item import CompoundItem
+from graphics_item.text_item import TextItem
+from graphics_item.triangle_item import TriangleItem
+from graphics_item.square_item import SquareItem
+from graphics_item.circle_item import CircleItem
 
 
 class ItemFactory:

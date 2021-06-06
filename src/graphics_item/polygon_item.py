@@ -1,5 +1,5 @@
 from typing import Optional
-from GraphicsItems.pp_item import PPItem
+from graphics_item.pp_item import PPItem
 from algorithms import my_algorithms as alg
 from PyQt5.QtCore import QRectF,Qt
 from PyQt5.QtGui import QPainter, QPen, QColor

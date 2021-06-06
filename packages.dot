@@ -1,0 +1,31 @@
+digraph "packages" {
+charset="utf-8"
+rankdir=BT
+"0" [label="src", shape="box"];
+"1" [label="src.GUI", shape="box"];
+"2" [label="src.GUI.gui", shape="box"];
+"3" [label="src.algorithms", shape="box"];
+"4" [label="src.algorithms.my_algorithms", shape="box"];
+"5" [label="src.graphics_item", shape="box"];
+"6" [label="src.graphics_item.circle_item", shape="box"];
+"7" [label="src.graphics_item.compound_item", shape="box"];
+"8" [label="src.graphics_item.curve_item", shape="box"];
+"9" [label="src.graphics_item.ellipse_item", shape="box"];
+"10" [label="src.graphics_item.item_factory", shape="box"];
+"11" [label="src.graphics_item.line_item", shape="box"];
+"12" [label="src.graphics_item.polygon_item", shape="box"];
+"13" [label="src.graphics_item.pp_item", shape="box"];
+"14" [label="src.graphics_item.square_item", shape="box"];
+"15" [label="src.graphics_item.text_item", shape="box"];
+"16" [label="src.graphics_item.triangle_item", shape="box"];
+"17" [label="src.graphics_item.useful", shape="box"];
+"18" [label="src.utils", shape="box"];
+"19" [label="src.utils.add_command", shape="box"];
+"20" [label="src.utils.command", shape="box"];
+"21" [label="src.utils.command_history", shape="box"];
+"22" [label="src.utils.copy_command", shape="box"];
+"23" [label="src.utils.paste_command", shape="box"];
+"24" [label="src.utils.remove_command", shape="box"];
+"25" [label="src.utils.undo_command", shape="box"];
+"26" [label="src.utils.useful", shape="box"];
+}

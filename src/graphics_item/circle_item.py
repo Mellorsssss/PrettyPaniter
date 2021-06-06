@@ -1,4 +1,4 @@
-from GraphicsItems.ellipse_item import EllipseItem
+from graphics_item.ellipse_item import EllipseItem
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QGraphicsItem
 

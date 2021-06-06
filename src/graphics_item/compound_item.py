@@ -2,7 +2,7 @@ from typing import Optional
 from PyQt5.QtCore import QRectF
 from PyQt5.QtGui import QPainter
 from PyQt5.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
-from GraphicsItems.pp_item import PPItem
+from graphics_item.pp_item import PPItem
 from algorithms import my_algorithms as alg
 
 
@@ -12,6 +12,10 @@ class CompoundItem(PPItem):
         self.itemList = []
 
     def appendItem(self, item):
+        # if item is not subclass of PPItem, then do not append them
+        if not issubclass(type(item), PPItem):
+            return
+
         self.itemList.append(item)
         item.unableSelect()
         return self  # for chain call

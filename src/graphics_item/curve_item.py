@@ -5,7 +5,7 @@ from PyQt5.QtCore import QRectF,Qt
 from PyQt5.QtGui import QPainter, QColor, QPen
 from algorithms import my_algorithms as alg
 from PyQt5.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
-from GraphicsItems.pp_item import PPItem
+from graphics_item.pp_item import PPItem
 
 
 class CurveItem(PPItem):

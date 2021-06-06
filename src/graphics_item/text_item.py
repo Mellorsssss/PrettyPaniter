@@ -3,11 +3,11 @@ from typing import Optional
 from PyQt5.QtCore import QRectF, Qt
 from PyQt5.QtGui import QFont, QPainter, QPen, QColor
 from PyQt5.QtWidgets import QGraphicsTextItem, QStyleOptionGraphicsItem, QWidget, QGraphicsItem
-from GraphicsItems.pp_item import PPItem
+from graphics_item.pp_item import PPItem
 
 
 class TextItem(QGraphicsTextItem):
-    def __init__(self, _id, _text:str = "this is demo"):
+    def __init__(self, _id, _text: str = "this is demo"):
         super(TextItem, self).__init__()
         self.id = _id
         self.item_type = 'text'
@@ -84,9 +84,7 @@ class TextItem(QGraphicsTextItem):
         将当前的 item 转换为一个 dict 用于可持续化
         :return: 转换之后的
         '''
-        params_dict = {'id': self.id, 'type': self.item_type, 'p_list': None, 'algorithm': None,
-                       'color': [self.color.red(), self.color.green(), self.color.blue()], 'zvalue': self.zValue()}
-        return params_dict
+        pass
 
     def clone(self):
         cloned_obj = TextItem(self.id)

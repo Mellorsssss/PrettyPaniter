@@ -7,8 +7,8 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import math
 import json
 from algorithms import my_algorithms as alg
-from GraphicsItems.item_factory import ItemFactory
-from GraphicsItems.pp_item import PPItem
+from graphics_item.item_factory import ItemFactory
+from graphics_item.pp_item import PPItem
 from utils.command import Command
 from utils.copy_command import CopyCommand
 from utils.paste_command import PasteCommand
@@ -192,6 +192,9 @@ class PPCanvas(QGraphicsView):
         for tem in self.compound_items:
             item.appendItem(tem)
 
+        if len(item.itemList) ==0:
+            return
+
         self.selected_item = item
         self.selected_item.setZValue(self.max_z + 1)  # 将当前的图元放在最顶层
         self.max_z += 1
@@ -238,6 +241,8 @@ class PPCanvas(QGraphicsView):
         dump_dict = {}
         for index, item in self.item_dict.items():
             ans = item.dump_as_dict()
+            if ans is None:
+                continue
             dump_dict[index] = ans
 
         with open(save_path, 'w', encoding='UTF=8') as save_file:
@@ -468,6 +473,9 @@ class PPCanvas(QGraphicsView):
         self.temp_item = None
 
     def remove_selection(self):
+        if self.selected_item is None or self.selected_id == '':
+            return
+
         self.remove_item(self.selected_id)
 
     def status_changed(self):
