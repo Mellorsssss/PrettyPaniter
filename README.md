@@ -5,7 +5,7 @@ Pretty Painter is a simple but powerful painting software written by Python and 
 
 #### TODO
 ##### basic part:
-- [ ] add text description of the graphics items
-- [ ] undo and redo the actions
+- [x] add text description of the graphics items
+- [x] undo and redo the actions
 ##### advanced part:
-- [ ] diy the interface
+- [x] diy the interface
