@@ -12,7 +12,7 @@ I wrote PrettyPainter for multiple undergraduate courses(*CG*, *Design Patterns*
 .
 - install dependancy: pyqt5
 
-- just run `python gui.py`
+- just run `python gui.py` under GUI dir
 
 #### Features
 - [x] draw, erase basic graphic items(e.g. circles, squres)
