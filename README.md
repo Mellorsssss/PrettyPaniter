@@ -14,7 +14,7 @@ I wrote PrettyPainter for multiple undergraduate courses(*CG*, *Design Patterns*
 
 - just run `python gui.py` under GUI dir
 
-#### Features
+### Features
 - [x] draw, erase basic graphic items(e.g. circles, squres)
 - [x] add text description of the graphics items
 - [x] undo and redo the actions
